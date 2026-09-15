@@ -132,7 +132,7 @@
   <header class="relative z-10 pt-10 pb-6 text-center">
     <div class="inline-block">
       <h1 class="text-4xl md:text-5xl font-display font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-neon-teal via-white to-neon-purple mb-2 pb-2">
-        Calculadora Estratégica
+        Calculadora Estratégica.
       </h1>
       <p class="text-sm md:text-base text-gray-400 uppercase tracking-[0.3em] font-semibold">Motor Predictivo RLabs</p>
     </div>
