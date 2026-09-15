@@ -12,7 +12,7 @@ cat > $BACKUP_DIR/fetch.py << 'PYEOF'
 import ftplib
 import os
 try:
-    ftp = ftplib.FTP('ftpupload.net', 'if0_40933868', 'WYDk3sCTGK8s0u')
+    ftp = ftplib.FTP(os.environ['LOTTERY_FTP_HOST'], os.environ['LOTTERY_FTP_USER'], os.environ['LOTTERY_FTP_PASS'])
     ftp.cwd('htdocs/lottery')
     for f in ftp.nlst():
         if f not in ['.', '..']:

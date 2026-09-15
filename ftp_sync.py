@@ -1,12 +1,13 @@
+from lottery_config import FTP_HOST, FTP_USER, FTP_PASS
 import time
 import os
 import ftplib
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-HOST = "ftpupload.net"
-USER = "if0_40933868"
-PASSWD = "WYDk3sCTGK8s0u"
+HOST = FTP_HOST
+USER = FTP_USER
+PASSWD = FTP_PASS
 REMOTE_BASE_DIR = "/htdocs/lottery"
 LOCAL_BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 

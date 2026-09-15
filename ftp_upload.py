@@ -1,3 +1,4 @@
+from lottery_config import FTP_HOST, FTP_USER, FTP_PASS, INGEST_TOKEN
 import ftplib
 import os
 
@@ -26,8 +27,8 @@ def ftp_upload_dir(ftp, local_dir, remote_dir):
             ftp.cwd('..')
 
 host = "ftpupload.net"
-user = "if0_40933868"
-passwd = "WYDk3sCTGK8s0u"
+user = FTP_USER
+passwd = FTP_PASS
 local_dir = r"C:\Users\Ricardo\OneDrive\Escritorio\Lottery"
 
 try:

@@ -397,6 +397,24 @@
       document.getElementById(id).addEventListener('change', guardarDatos);
     });
 
+    // La IA devuelve HTML por diseño (el prompt se lo pide). Se eliminan los
+    // vectores ejecutables antes de insertarlo con innerHTML.
+    function sanitizarHTML(html) {
+      const plantilla = document.createElement('template');
+      plantilla.innerHTML = html;
+      plantilla.content.querySelectorAll('script, style, iframe, object, embed, link, form').forEach(n => n.remove());
+      plantilla.content.querySelectorAll('*').forEach(el => {
+        [...el.attributes].forEach(attr => {
+          const nombre = attr.name.toLowerCase();
+          const valor = attr.value.replace(/\s+/g, '').toLowerCase();
+          if (nombre.startsWith('on') || valor.startsWith('javascript:') || valor.startsWith('data:text/html')) {
+            el.removeAttribute(attr.name);
+          }
+        });
+      });
+      return plantilla.innerHTML;
+    }
+
     // Función para invocar la IA en el frontend
     async function solicitarAnalisisIA(inversionFinalTotal, dias, juegoNombre, cantidadLoterias, resultadosCalculados) {
       const aiLoading = document.getElementById('ai-loading');
@@ -430,14 +448,10 @@ ${analisisDatos}
 
 Por favor, genera tu análisis siguiendo las instrucciones. Si es rentable, dame el ejemplo aleatorio, los 3 mejores momentos y la conclusión. Si es pura pérdida, adviérteme.`;
 
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        // La clave de OpenRouter vive en el servidor (api_ia.php), no aquí.
+        const response = await fetch("api_ia.php", {
           method: "POST",
-          headers: {
-            "Authorization": "Bearer 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",
-            "Content-Type": "application/json",
-            "HTTP-Referer": window.location.href,
-            "X-Title": "Lottery Strategy App"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
             "models": ["nvidia/nemotron-3-ultra-550b-a55b:free", "minimax/minimax-m3:free", "nvidia/llama-3.1-nemotron-70b-instruct:free"],
@@ -451,10 +465,10 @@ Por favor, genera tu análisis siguiendo las instrucciones. Si es rentable, dame
         const data = await response.json();
         
         aiLoading.classList.add('hidden');
-        if (data && data.choices && data.choices.length > 0) {
-          let aiMessage = data.choices[0].message.content;
+        if (data && data.content) {
+          let aiMessage = data.content;
           aiMessage = aiMessage.replace(/\`\`\`html/g, '').replace(/\`\`\`/g, '');
-          aiContent.innerHTML = aiMessage;
+          aiContent.innerHTML = sanitizarHTML(aiMessage);
           aiContent.classList.remove('hidden');
           aiContent.classList.add('animate-fade-in-up');
         } else {

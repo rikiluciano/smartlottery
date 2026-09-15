@@ -1,0 +1,40 @@
+# ---- Secretos (NUNCA versionar) ----
+secrets.php
+.env
+*.secret.*
+
+# ---- Datos generados en runtime ----
+db_backup.json
+db_dump.json
+prediccion.json
+prediccion_quinielas.json
+super_prediccion.json
+stats_quinielas.json
+resultados_pendientes.json
+history_*.json
+temp_resultados.json
+*.flag
+db_wiped.flag
+
+# ---- Data lakes / históricos generados ----
+historial_*.txt
+pales_encontrados.txt
+super_pales_encontrados.txt
+auditoria_pales.txt
+tripletas.txt
+
+# ---- Bases de datos locales ----
+*.sqlite
+*.db
+
+# ---- Depuración / temporales ----
+debug_*.txt
+db_error.txt
+db_count.txt
+local_*
+*.log
+*.out
+__pycache__/
+*.py[cod]
+.venv/
+venv/

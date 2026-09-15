@@ -1,3 +1,4 @@
+from lottery_config import FTP_HOST, FTP_USER, FTP_PASS, INGEST_TOKEN
 import requests
 import json
 import re
@@ -9,7 +10,7 @@ import subprocess
 
 # --- CONFIGURACIÓN ---
 TARGET_URL = 'https://enloteria.com/'
-SECRET_TOKEN = 'Rlabs_Scraper_V1_2026'
+SECRET_TOKEN = INGEST_TOKEN
 TRACKER_FILE = '/home/ubuntu/history_date.txt'
 # ----------------------
 
@@ -115,7 +116,7 @@ def extract_history():
         with open(temp_file, "w", encoding="utf-8") as f:
             json.dump({"token": SECRET_TOKEN, "resultados": resultados_a_enviar}, f)
         
-        ftp = ftplib.FTP('ftpupload.net', 'if0_40933868', 'WYDk3sCTGK8s0u')
+        ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
         for d in ['htdocs', 'lottery']:
             try: ftp.cwd(d)
             except: pass

@@ -1,40 +1,54 @@
-# Capa 1: Seguridad a nivel de Servidor Apache
+# ============================================================
+#  Seguridad y reescritura — InfinityFree / Apache
+# ============================================================
 
-# Activar motor de reescritura
 RewriteEngine On
 
-# Forzar HTTPS (Redirección segura)
+# ---- Forzar HTTPS ----
 RewriteCond %{HTTPS} off
 RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# Evitar listar el contenido de los directorios
+# ---- No listar directorios ----
 Options -Indexes
 
-# Ocultar extensiones .php (Si accedes a /resultados, carga resultados.php)
+# ---- URLs limpias: /resultados -> resultados.php ----
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^([^\.]+)$ $1.php [NC,L]
 
-# Bloquear acceso a archivos sensibles
-<FilesMatch "\.(json|py|md|flag|txt)$">
+# ---- Archivos que nunca deben servirse ----
+# Datos crudos, fuentes del VPS, configuración y artefactos de depuración.
+<FilesMatch "\.(json|py|md|sh|flag|txt|sqlite|db|log|out|yml|example\.php)$">
     Require all denied
 </FilesMatch>
 
-# Bloquear acceso al archivo de configuración de BD
-<Files "config_db.php">
-    Require all denied
+# Excepción: el manifiesto público, si algún día se añade.
+<Files "manifest.json">
+    Require all granted
 </Files>
 
-<Files "security.php">
+# ---- Configuración y credenciales ----
+<FilesMatch "^(config_db|secrets|secrets\.example|security)\.php$">
     Require all denied
+</FilesMatch>
+
+# ---- Panel de administración: restringir por IP ----
+# Sustituir por la IP fija desde la que se administra. Mientras esté en
+# 127.0.0.1 el panel queda cerrado a internet, que es el estado seguro por
+# defecto: antes era accesible por cualquiera sin autenticación.
+<Files "panel_admin.php">
+    Require ip 127.0.0.1
 </Files>
 
-# Protección básica contra SQL Injection y XSS en URLs
+# ---- Filtro básico de inyección en la query string ----
 RewriteCond %{QUERY_STRING} (?:%27|'|%22|").*(?:%20|\s|%2B|\+)*(?:union|select|insert|update|delete|drop|truncate) [NC,OR]
 RewriteCond %{QUERY_STRING} (?:%3C|<).*script.*(?:%3E|>) [NC]
 RewriteRule ^ - [F]
 
-# Bloquear User-Agents maliciosos conocidos (Bots de scraping)
-RewriteCond %{HTTP_USER_AGENT} ^.*(curl|wget|python-requests|scrapy|bot|spider|crawler).*$ [NC]
-RewriteRule ^ - [F]
+# NOTA: aquí había un bloqueo por User-Agent que incluía los patrones
+# `bot`, `spider` y `crawler`. Eso rechazaba a Googlebot, Bingbot y a
+# cualquier buscador — el sitio quedaba invisible para el SEO — y además
+# bloqueaba a los propios scrapers del VPS (`python-requests`).
+# Si hace falta frenar abuso, el camino correcto es limitar por tasa,
+# no por cadena de User-Agent.

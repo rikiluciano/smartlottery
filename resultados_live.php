@@ -6,7 +6,7 @@ if (file_exists('resultados_pendientes.json')) {
     try {
         $json = file_get_contents('resultados_pendientes.json');
         $data = json_decode($json, true);
-        if ($data && isset($data['token']) && $data['token'] === 'Rlabs_Scraper_V1_2026') {
+        if ($data && isset($data['token']) && hash_equals((string) cfg('ingest_token'), (string) $data['token'])) {
             $resultados = $data['resultados'];
             $stmt = $pdo->prepare("
                 INSERT INTO sorteos (fecha, nombre_loteria, primera, segunda, tercera) 

@@ -1,21 +1,15 @@
 <?php
-require_once 'config_db.php';
+require_once __DIR__ . '/../config_db.php';
 
 date_default_timezone_set('America/Santo_Domingo');
 $fechaHoy = date('Y-m-d');
 $mesActual = date('Y-m');
 
-file_put_contents('debug_early.txt', 'Página cargada a las: ' . date('H:i:s'));
-
-// Mantenimiento automático para arreglar resultados corrompidos del día anterior que fueron subidos después de las 12 AM
-// Ejecutar solo si son antes de las 8 AM (ya que los primeros sorteos salen a las 8 AM)
-if (date('H') < 8) {
-    try {
-        $pdo->exec("DELETE FROM sorteos WHERE fecha = '" . $fechaHoy . "'");
-    } catch (Exception $e) {
-        // Ignorar
-    }
-}
+// NOTA: aquí había un `DELETE FROM sorteos WHERE fecha = hoy` que se ejecutaba
+// en CADA carga de página antes de las 8 AM. Borraba los resultados del día a
+// cada visita y dependía de que ningún sorteo publicara antes de esa hora.
+// La deduplicación ya la garantiza el UNIQUE KEY (fecha, nombre_loteria) con
+// ON DUPLICATE KEY UPDATE, así que el borrado era innecesario además de peligroso.
 
 // Backup automático de la base de datos (una vez al día)
 $backup_file = 'db_backup.json';
@@ -49,13 +43,7 @@ foreach ($archivos_json as $archivo) {
     try {
         $json = file_get_contents($archivo);
         $data = json_decode($json, true);
-        if ($data && isset($data['token']) && $data['token'] === 'Rlabs_Scraper_V2_2026') {
-            
-            // AUTO TRUNCATE TRIGGER - WIPE DB si se detecta un payload de V2 por primera vez
-            if (!file_exists('db_wiped.flag')) {
-                $pdo->exec("TRUNCATE TABLE sorteos");
-                file_put_contents('db_wiped.flag', 'wiped');
-            }
+        if ($data && isset($data['token']) && hash_equals((string) cfg('ingest_token'), (string) $data['token'])) {
             
             $resultados = $data['resultados'];
             $stmt = $pdo->prepare("
@@ -138,7 +126,7 @@ $resultadosFinales = [];
 $totalLoterias = 0;
 
 try {
-    require_once 'mapa_horarios.php';
+    require_once __DIR__ . '/mapa_horarios.php';
 
     $stmt = $pdo->prepare("SELECT fecha, nombre_loteria, primera, segunda, tercera FROM sorteos WHERE fecha <= :fecha ORDER BY fecha DESC");
     $stmt->execute([':fecha' => $fechaSeleccionada]);

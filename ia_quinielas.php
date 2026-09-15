@@ -422,15 +422,10 @@
                 prompt += "7. Actúa como si tú mismo hubieras hecho el análisis. Sé profesional y directo.\n";
                 prompt += "8. REVISA TU ORTOGRAFÍA Y GRAMÁTICA. Asegúrate de usar correctamente el género y número (ej. 'un reaparecimiento' o 'una reaparición', NUNCA 'una reaparecimiento').\n";
 
-                // 3. Llamar a OpenRouter directamente desde el Frontend (NVIDIA bloquea las peticiones desde el navegador por política CORS)
-                const openRouterApiKey = "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";
-                const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                // 3. Llamar a la IA a través del proxy del servidor (la clave no sale del servidor)
+                const orRes = await fetch("api_ia.php", {
                     method: "POST",
-                    headers: {
-                        "Authorization": "Bearer " + openRouterApiKey,
-                        "Content-Type": "application/json",
-                        "HTTP-Referer": "http://numerosrd.42web.io"
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         model: "nvidia/nemotron-3-super-120b-a12b:free",
                         max_tokens: 3000,
@@ -446,8 +441,8 @@
                 typing.classList.add('hidden');
                 resultBox.classList.remove('hidden');
                 
-                if (orData.choices && orData.choices.length > 0) {
-                    let aiText = orData.choices[0].message.content;
+                if (orData && orData.content) {
+                    let aiText = orData.content;
                     
                     // Eliminar bloques de pensamiento si la IA los incluye (ej. <think>...</think>)
                     aiText = aiText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();

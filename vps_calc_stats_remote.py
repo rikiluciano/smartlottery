@@ -1,3 +1,4 @@
+from lottery_config import FTP_HOST, FTP_USER, FTP_PASS, INGEST_TOKEN
 import json
 from collections import defaultdict, Counter
 from datetime import datetime
@@ -115,7 +116,7 @@ def calculate_stats():
     
     try:
         import ftplib
-        ftp = ftplib.FTP('ftpupload.net', 'if0_40933868', 'WYDk3sCTGK8s0u')
+        ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
         ftp.cwd('htdocs/lottery')
         with open('stats_quinielas.json', 'rb') as f:
             ftp.storbinary('STOR stats_quinielas.json', f)

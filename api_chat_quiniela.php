@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/config_db.php';
 header('Content-Type: application/json');
 
 $target_nums = $_REQUEST['target'] ?? null;
@@ -50,7 +51,7 @@ if (!$es_digito) {
 }
 
 // Configurar el LLM
-$openRouterApiKey = "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";
+$openRouterApiKey = (string) cfg('openrouter_key');
 $prompt = "Actúa como un experto analista estadístico de loterías.\n";
 $prompt .= "Se ha detectado que el número (o dígito) más rezagado matemáticamente es el {$target}.\n\n";
 $prompt .= "Aquí están las estadísticas ESTRICTAS reales calculadas de una base de datos de 35,000 sorteos:\n";

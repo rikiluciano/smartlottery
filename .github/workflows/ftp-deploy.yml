@@ -27,8 +27,18 @@ jobs:
           **/.git*
           **/.git*/**
           **/node_modules/**
-          **/scratch/**
+          **/__pycache__/**
           **/*.log
-          local_*.json
-          local_*.php
-          local_*.txt
+          # Los scripts del VPS no pintan nada en el hosting público.
+          **/*.py
+          **/*.sh
+          # Credenciales: se suben a mano una sola vez y no se tocan.
+          secrets.php
+          secrets.example.php
+          .env
+          # Datos generados: los sube el VPS por FTP, no el deploy.
+          db_backup.json
+          historial_*.txt
+          *.flag
+          local_*
+          README.md

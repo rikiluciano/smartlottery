@@ -1,3 +1,4 @@
+from lottery_config import FTP_HOST, FTP_USER, FTP_PASS, INGEST_TOKEN
 import json
 
 def run():
@@ -110,7 +111,7 @@ def run():
     print("Subiendo archivos al FTP...")
     try:
         import ftplib
-        ftp = ftplib.FTP('ftpupload.net', 'if0_40933868', 'WYDk3sCTGK8s0u')
+        ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
         ftp.cwd('htdocs/lottery')
         with open('prediccion_quinielas.json', 'rb') as f:
             ftp.storbinary('STOR prediccion_quinielas.json', f)

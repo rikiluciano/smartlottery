@@ -1,3 +1,4 @@
+from lottery_config import FTP_HOST, FTP_USER, FTP_PASS, INGEST_TOKEN
 import requests
 import json
 import re
@@ -149,14 +150,14 @@ def main():
         
     # Usamos V2
     payload = {
-        'token': 'Rlabs_Scraper_V2_2026',
+        'token': INGEST_TOKEN,
         'resultados': all_resultados
     }
     
     if all_resultados:
         try:
             print("Connecting to FTP para enviar histórico...")
-            ftp = ftplib.FTP('ftpupload.net', 'if0_40933868', 'WYDk3sCTGK8s0u')
+            ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
             ftp.cwd('htdocs/lottery')
             
             with tempfile.NamedTemporaryFile('w', delete=False) as tf:

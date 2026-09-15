@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/config_db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 // Permitir CORS por si acaso
@@ -21,7 +22,7 @@ $juego = $data['juegoNombre'] ?? 'juego';
 $cantidadLoterias = intval($data['cantidadLoterias'] ?? 1);
 
 // OpenRouter API integration
-$openRouterApiKey = "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";
+$openRouterApiKey = (string) cfg('openrouter_key');
 
 $invF = "$" . number_format($inversionTotal, 2);
 $ganF = "$" . number_format($gananciaNetaFinal, 2);

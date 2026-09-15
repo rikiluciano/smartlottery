@@ -1,3 +1,4 @@
+from lottery_config import FTP_HOST, FTP_USER, FTP_PASS, INGEST_TOKEN
 import ftplib
 import os
 import time
@@ -11,7 +12,7 @@ if not os.path.exists(backup_dir):
 today_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 zip_filename = os.path.join(backup_dir, f"lottery_backup_{today_str}.zip")
 
-ftp = ftplib.FTP('ftpupload.net', 'if0_40933868', 'WYDk3sCTGK8s0u')
+ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
 ftp.cwd('htdocs/lottery')
 
 def download_dir(ftp_dir, local_zip):

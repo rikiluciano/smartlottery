@@ -1,11 +1,16 @@
+import os
+
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
+if not SUPABASE_KEY:
+    raise SystemExit('Falta la variable de entorno SUPABASE_KEY')
 import json
 import requests
 import time
 
 URL = 'https://glzhfpwahowzjsrivvno.supabase.co/rest/v1/sorteos'
 HEADERS = {
-    'apikey': 'sb_publishable_-RJ_q92T8oWqrNhpncamBw_RKEPjyfL',
-    'Authorization': 'Bearer sb_publishable_-RJ_q92T8oWqrNhpncamBw_RKEPjyfL',
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_KEY,
     'Content-Type': 'application/json',
     'Prefer': 'return=minimal'
 }

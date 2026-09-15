@@ -1,22 +1,36 @@
 <?php
 header('Content-Type: application/json');
 
-// Permitir peticiones solo desde nuestro mismo dominio o local
-header("Access-Control-Allow-Origin: *"); 
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type");
+// Endpoint de ingesta máquina-a-máquina: no lo consume ningún navegador,
+// así que no necesita CORS. Antes tenía `Allow-Origin: *`, que permitía a
+// cualquier web invocarlo desde el navegador de un visitante.
+header('Access-Control-Allow-Origin: null');
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['status' => 'error', 'message' => 'Método no permitido']);
+    exit;
+}
 
 require_once 'config_db.php';
 
-// Token de seguridad ultra secreto
-$SECRET_TOKEN = "Rlabs_Scraper_V1_2026";
+$SECRET_TOKEN = (string) cfg('ingest_token');
 
 // Leer el JSON recibido
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
-if (!$data || !is_array($data) || !isset($data['token']) || $data['token'] !== $SECRET_TOKEN) {
-    echo json_encode(["status" => "error", "message" => "Datos inválidos o no autorizado"]);
+if ($SECRET_TOKEN === ''
+    || !$data || !is_array($data) || !isset($data['token'])
+    || !hash_equals($SECRET_TOKEN, (string) $data['token'])) {
+    http_response_code(401);
+    echo json_encode(["status" => "error", "message" => "No autorizado"]);
+    exit;
+}
+
+if (!isset($data['resultados']) || !is_array($data['resultados'])) {
+    http_response_code(400);
+    echo json_encode(["status" => "error", "message" => "Payload inválido"]);
     exit;
 }
 
@@ -78,6 +92,8 @@ try {
     ]);
 
 } catch (Exception $e) {
-    echo json_encode(["status" => "error", "message" => "Error de BD: " . $e->getMessage()]);
+    error_log('guardar_resultados: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(["status" => "error", "message" => "Error interno"]);
 }
 ?>
