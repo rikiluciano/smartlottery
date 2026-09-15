@@ -1,0 +1,1 @@
+Llegó antes del select. Archivos procesados: 5

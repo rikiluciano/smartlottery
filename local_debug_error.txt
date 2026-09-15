@@ -1,0 +1,1 @@
+Error DB (Throwable): SQLSTATE[42000]: Syntax error or access violation: 1226 User 'if0_40933868' has exceeded the 'max_queries_per_hour' resource (current value: 100000) in /home/vol9_3/infinityfree.com/if0_40933868/htdocs/lottery/core/logic.php:145

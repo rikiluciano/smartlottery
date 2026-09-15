@@ -1,0 +1,45 @@
+# Capa 1: Seguridad a nivel de Servidor Apache
+
+# Activar motor de reescritura
+RewriteEngine On
+
+# Forzar HTTPS (Redirección segura)
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Evitar listar el contenido de los directorios
+Options -Indexes
+
+# Ocultar extensiones .php (Si accedes a /resultados, carga resultados.php)
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^([^\.]+)$ $1.php [NC,L]
+
+# Bloquear acceso a archivos sensibles
+<FilesMatch "\.(json|py|md|flag|txt)$">
+    Require all denied
+</FilesMatch>
+
+# Bloquear acceso al archivo de configuración de BD
+<Files "config_db.php">
+    Require all denied
+</Files>
+
+<Files "security.php">
+    Require all denied
+</Files>
+
+# Protección básica contra SQL Injection y XSS en URLs
+RewriteCond %{QUERY_STRING} (?:%27|'|%22|").*(?:%20|\s|%2B|\+)*(?:union|select|insert|update|delete|drop|truncate) [NC,OR]
+RewriteCond %{QUERY_STRING} (?:%3C|<).*script.*(?:%3E|>) [NC]
+RewriteRule ^ - [F]
+
+# Bloquear User-Agents maliciosos conocidos (Bots de scraping)
+RewriteCond %{HTTP_USER_AGENT} ^.*(curl|wget|python-requests|scrapy|bot|spider|crawler).*$ [NC]
+RewriteRule ^ - [F]
+
+# Permitir acceso al JSON publico de prediccion
+<Files "prediccion.json">
+    Require all granted
+</Files>

@@ -1,0 +1,227 @@
+{
+  "general": {
+    "all": {
+      "status": "found_one",
+      "missing": [
+        "60-66"
+      ],
+      "fecha_alcanzada": "2024-10-15"
+    }
+  },
+  "iniciales": {
+    "0": {
+      "status": "found_one",
+      "missing": [
+        "00-01"
+      ],
+      "fecha_alcanzada": "2025-09-10"
+    },
+    "1": {
+      "status": "found_one",
+      "missing": [
+        "18-19"
+      ],
+      "fecha_alcanzada": "2025-06-09"
+    },
+    "2": {
+      "status": "found_one",
+      "missing": [
+        "22-27"
+      ],
+      "fecha_alcanzada": "2025-08-28"
+    },
+    "3": {
+      "status": "found_one",
+      "missing": [
+        "31-36"
+      ],
+      "fecha_alcanzada": "2025-10-08"
+    },
+    "4": {
+      "status": "found_one",
+      "missing": [
+        "41-46"
+      ],
+      "fecha_alcanzada": "2025-09-20"
+    },
+    "5": {
+      "status": "found_one",
+      "missing": [
+        "52-54"
+      ],
+      "fecha_alcanzada": "2025-10-01"
+    },
+    "6": {
+      "status": "found_one",
+      "missing": [
+        "60-66"
+      ],
+      "fecha_alcanzada": "2024-12-26"
+    },
+    "7": {
+      "status": "found_one",
+      "missing": [
+        "77-78"
+      ],
+      "fecha_alcanzada": "2025-09-14"
+    },
+    "8": {
+      "status": "found_one",
+      "missing": [
+        "82-85"
+      ],
+      "fecha_alcanzada": "2025-09-23"
+    },
+    "9": {
+      "status": "found_one",
+      "missing": [
+        "92-95"
+      ],
+      "fecha_alcanzada": "2024-12-12"
+    }
+  },
+  "terminales": {
+    "0": {
+      "status": "found_one",
+      "missing": [
+        "50-70"
+      ],
+      "fecha_alcanzada": "2025-09-22"
+    },
+    "1": {
+      "status": "found_one",
+      "missing": [
+        "01-11"
+      ],
+      "fecha_alcanzada": "2025-08-25"
+    },
+    "2": {
+      "status": "found_one",
+      "missing": [
+        "02-62"
+      ],
+      "fecha_alcanzada": "2025-10-29"
+    },
+    "3": {
+      "status": "found_one",
+      "missing": [
+        "13-53"
+      ],
+      "fecha_alcanzada": "2025-06-12"
+    },
+    "4": {
+      "status": "found_one",
+      "missing": [
+        "34-74"
+      ],
+      "fecha_alcanzada": "2025-09-16"
+    },
+    "5": {
+      "status": "found_one",
+      "missing": [
+        "85-95"
+      ],
+      "fecha_alcanzada": "2025-08-12"
+    },
+    "6": {
+      "status": "found_one",
+      "missing": [
+        "26-96"
+      ],
+      "fecha_alcanzada": "2025-08-28"
+    },
+    "7": {
+      "status": "found_one",
+      "missing": [
+        "07-77"
+      ],
+      "fecha_alcanzada": "2025-07-31"
+    },
+    "8": {
+      "status": "found_one",
+      "missing": [
+        "08-38"
+      ],
+      "fecha_alcanzada": "2025-10-05"
+    },
+    "9": {
+      "status": "found_one",
+      "missing": [
+        "19-99"
+      ],
+      "fecha_alcanzada": "2025-07-19"
+    }
+  },
+  "compartidos": {
+    "0": {
+      "status": "found_one",
+      "missing": [
+        "00-01"
+      ],
+      "fecha_alcanzada": "2025-07-06"
+    },
+    "1": {
+      "status": "found_one",
+      "missing": [
+        "01-11"
+      ],
+      "fecha_alcanzada": "2024-12-15"
+    },
+    "2": {
+      "status": "found_one",
+      "missing": [
+        "24-62"
+      ],
+      "fecha_alcanzada": "2025-04-15"
+    },
+    "3": {
+      "status": "found_one",
+      "missing": [
+        "13-53"
+      ],
+      "fecha_alcanzada": "2025-06-12"
+    },
+    "4": {
+      "status": "found_one",
+      "missing": [
+        "24-45"
+      ],
+      "fecha_alcanzada": "2025-05-08"
+    },
+    "5": {
+      "status": "found_one",
+      "missing": [
+        "52-54"
+      ],
+      "fecha_alcanzada": "2025-07-13"
+    },
+    "6": {
+      "status": "found_one",
+      "missing": [
+        "60-66"
+      ],
+      "fecha_alcanzada": "2024-12-26"
+    },
+    "7": {
+      "status": "found_one",
+      "missing": [
+        "77-78"
+      ],
+      "fecha_alcanzada": "2025-06-08"
+    },
+    "8": {
+      "status": "found_one",
+      "missing": [
+        "08-38"
+      ],
+      "fecha_alcanzada": "2025-09-05"
+    },
+    "9": {
+      "status": "found_one",
+      "missing": [
+        "92-95"
+      ],
+      "fecha_alcanzada": "2024-12-12"
+    }
+  }
+}
