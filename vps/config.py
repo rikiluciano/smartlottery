@@ -34,9 +34,9 @@ HTTP_TIMEOUT = int(os.environ.get("LOTTERY_HTTP_TIMEOUT", "15"))
 HTTP_REINTENTOS = int(os.environ.get("LOTTERY_HTTP_REINTENTOS", "3"))
 PAUSA_ENTRE_PETICIONES = float(os.environ.get("LOTTERY_PAUSA", "0.4"))
 
-# El sitio de origen publica resultados del día anterior durante la madrugada.
-# Fuera de esa franja, rastrear "ayer" es tráfico desperdiciado.
-HORA_LIMITE_RASTREO_AYER = 10
+# Cada página del origen devuelve las últimas 14 jornadas, así que basta con
+# pedir la fecha de hoy. Ver la nota en scraper.fechas_a_rastrear().
+JORNADAS_POR_PAGINA = 14
 
 
 def exigir_credenciales_ftp() -> None:
@@ -53,3 +53,13 @@ def exigir_token() -> str:
     if not INGEST_TOKEN:
         raise SystemExit("Falta LOTTERY_INGEST_TOKEN en el entorno.")
     return INGEST_TOKEN
+
+
+def ruta(nombre: str) -> str:
+    """Resuelve un archivo de datos contra DATA_DIR.
+
+    Los motores abrían sus archivos con rutas relativas, así que solo
+    funcionaban si el directorio de trabajo era exactamente /home/ubuntu.
+    Con esto dan igual el cwd y desde dónde los invoque el cron.
+    """
+    return str(DATA_DIR / nombre)

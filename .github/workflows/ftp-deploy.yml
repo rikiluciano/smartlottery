@@ -60,10 +60,24 @@ jobs:
             secrets.example.php
             .env
             # Datos generados: los publica el VPS por FTP, no el despliegue.
+            # Excluirlos es IMPRESCINDIBLE: varios estuvieron versionados, y sin
+            # esta lista el despliegue los borraría del servidor al no
+            # encontrarlos ya en el repositorio. La web se quedaría sin datos
+            # hasta la siguiente tanda de resultados nuevos.
             db_backup.json
-            historial_*.txt
+            db_dump.json
+            prediccion.json
+            prediccion_quinielas.json
+            super_prediccion.json
+            stats_quinielas.json
             resultados_pendientes.json
             history_*.json
+            historial_*.txt
+            tripletas.txt
+            auditoria_pales.txt
+            pales_encontrados.txt
+            super_pales_encontrados.txt
             *.flag
             local_*
+            debug_*.txt
             README.md

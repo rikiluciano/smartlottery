@@ -7,7 +7,7 @@ def run():
     dates = []
     draws = {}
     try:
-        with open('historial_quinielas.txt', 'r', encoding='utf-8') as f:
+        with open(config.ruta('historial_quinielas.txt'), 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if not line: continue
@@ -105,7 +105,7 @@ def run():
                     specific_res[d] = {"status": "history_ended", "fecha": "N/A", "digit": d}
                 results['digito'][pos][cat][d] = specific_res[d]
 
-    with open('prediccion_quinielas.json', 'w', encoding='utf-8') as f:
+    with open(config.ruta('prediccion_quinielas.json'), 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2)
         
     print("Subiendo archivos al FTP...")
@@ -113,7 +113,7 @@ def run():
         import ftplib
         ftp = ftplib.FTP(config.FTP_HOST, config.FTP_USER, config.FTP_PASS)
         ftp.cwd(config.FTP_DIR)
-        with open('prediccion_quinielas.json', 'rb') as f:
+        with open(config.ruta('prediccion_quinielas.json'), 'rb') as f:
             ftp.storbinary('STOR prediccion_quinielas.json', f)
         ftp.quit()
         print("Subida exitosa.")

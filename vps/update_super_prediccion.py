@@ -37,7 +37,7 @@ def run():
     dates = []
     draws = {}
     try:
-        with open('historial_primeras.txt', 'r', encoding='utf-8') as f:
+        with open(config.ruta('historial_primeras.txt'), 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if not line: continue
@@ -76,14 +76,14 @@ def run():
                 missing = (target_set - seen).pop()
                 
                 if is_general:
-                    with open('super_pales_encontrados.txt', 'w', encoding='utf-8') as f:
+                    with open(config.ruta('super_pales_encontrados.txt'), 'w', encoding='utf-8') as f:
                         for p, fch in found_with_dates:
                             f.write(f"combinacion: {p} fecha: {fch}\n")
                             
                 return {"status": "found_one", "missing": [missing], "fecha_alcanzada": fecha}
             elif remaining == 0:
                 if is_general:
-                    with open('super_pales_encontrados.txt', 'w', encoding='utf-8') as f:
+                    with open(config.ruta('super_pales_encontrados.txt'), 'w', encoding='utf-8') as f:
                         for p, fch in found_with_dates:
                             f.write(f"combinacion: {p} fecha: {fch}\n")
                 return {"status": "found_zero_simultaneously", "missing": [], "fecha_alcanzada": fecha}
@@ -96,7 +96,7 @@ def run():
         for digit, target_set in sets[category].items():
             results[category][digit] = find_missing_sp(target_set, dates, draws)
             
-    with open('super_prediccion.json', 'w', encoding='utf-8') as f:
+    with open(config.ruta('super_prediccion.json'), 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2)
         
     print("Subiendo archivos al FTP...")
@@ -104,12 +104,12 @@ def run():
         import ftplib
         ftp = ftplib.FTP(config.FTP_HOST, config.FTP_USER, config.FTP_PASS)
         ftp.cwd(config.FTP_DIR)
-        with open('super_prediccion.json', 'rb') as f:
+        with open(config.ruta('super_prediccion.json'), 'rb') as f:
             ftp.storbinary('STOR super_prediccion.json', f)
             
         import os
         if os.path.exists('super_pales_encontrados.txt'):
-            with open('super_pales_encontrados.txt', 'rb') as f:
+            with open(config.ruta('super_pales_encontrados.txt'), 'rb') as f:
                 ftp.storbinary('STOR super_pales_encontrados.txt', f)
                 
         ftp.quit()

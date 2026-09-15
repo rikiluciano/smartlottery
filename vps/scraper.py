@@ -21,7 +21,7 @@ import re
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 from zoneinfo import ZoneInfo
@@ -83,18 +83,20 @@ def extraer_sorteos(html: str) -> list[dict]:
 
 
 def fechas_a_rastrear(ahora: datetime) -> list[str]:
-    """Hoy siempre; ayer solo durante la madrugada.
+    """Solo hoy.
 
-    El origen publica los resultados tardíos del día anterior de madrugada.
-    Rastrear «ayer» las 24 horas duplicaba el tráfico sin aportar nada: son
-    ~43 peticiones extra por minuto, unas 62 000 al día.
+    Cada página del origen devuelve las últimas 14 jornadas de esa lotería,
+    no únicamente la fecha pedida. Comprobado contra el sitio en vivo: la URL
+    de hoy y la de ayer traen exactamente los mismos sorteos recientes; la de
+    ayer solo añade una jornada más antigua que ya está en el historial.
+
+    Pedir además «ayer» duplicaba las peticiones —86 por pasada en vez de 43,
+    unas 62 000 al día— sin aportar un solo resultado nuevo.
+
+    Como cada página cubre dos semanas, el sistema se recupera solo aunque
+    el scraper esté caído varios días.
     """
-    fechas = [ahora.strftime("%Y-%m-%d")]
-
-    if ahora.hour < config.HORA_LIMITE_RASTREO_AYER:
-        fechas.append((ahora - timedelta(days=1)).strftime("%Y-%m-%d"))
-
-    return fechas
+    return [ahora.strftime("%Y-%m-%d")]
 
 
 def rastrear(fechas: list[str]) -> list[dict]:
@@ -229,22 +231,30 @@ MOTORES = ("update_prediccion", "update_quinielas", "update_super_prediccion", "
 
 
 def disparar_motores() -> None:
-    """Ejecuta los análisis. Las rutas salen de __file__, no van en duro."""
+    """Ejecuta los análisis.
+
+    Se invocan como módulos (`python3 -m vps.motor`) y no como scripts
+    sueltos: usan importación relativa para leer la configuración, y como
+    script suelto Python no reconoce el paquete padre.
+    """
     for motor in MOTORES:
-        guion = RAIZ / f"{motor}.py"
-        if not guion.is_file():
-            print(f"  motor ausente: {guion.name}")
+        if not (RAIZ / f"{motor}.py").is_file():
+            print(f"  motor ausente: {motor}.py")
             continue
 
         print(f"  ejecutando {motor}…")
         resultado = subprocess.run(
-            [sys.executable, str(guion)],
+            [sys.executable, "-m", f"vps.{motor}"],
+            cwd=str(RAIZ.parent),          # el paquete vps/ debe estar en el cwd
             capture_output=True,
             text=True,
             timeout=600,
         )
         if resultado.returncode != 0:
-            print(f"  {motor} falló ({resultado.returncode}): {resultado.stderr[:400]}")
+            print(f"  {motor} falló ({resultado.returncode}): {resultado.stderr[-500:]}")
+        elif resultado.stdout.strip():
+            ultima = resultado.stdout.strip().splitlines()[-1]
+            print(f"    {ultima[:110]}")
 
 
 # --------------------------------------------------------------------------

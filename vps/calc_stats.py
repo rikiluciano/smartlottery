@@ -6,7 +6,7 @@ from . import config
 def calculate_stats():
     print("Leyendo db_backup.json...")
     try:
-        with open('db_backup.json', 'r', encoding='utf-8') as f:
+        with open(config.ruta('db_backup.json'), 'r', encoding='utf-8') as f:
             data = json.load(f)
     except Exception as e:
         print("Error leyendo db_backup.json:", e)
@@ -109,7 +109,7 @@ def calculate_stats():
         "total_sorteos": len(data)
     }
 
-    with open('stats_quinielas.json', 'w', encoding='utf-8') as f:
+    with open(config.ruta('stats_quinielas.json'), 'w', encoding='utf-8') as f:
         json.dump(final_stats, f, indent=2, ensure_ascii=False)
 
     print("Estadísticas calculadas y guardadas en stats_quinielas.json")
@@ -118,7 +118,7 @@ def calculate_stats():
         import ftplib
         ftp = ftplib.FTP(config.FTP_HOST, config.FTP_USER, config.FTP_PASS)
         ftp.cwd(config.FTP_DIR)
-        with open('stats_quinielas.json', 'rb') as f:
+        with open(config.ruta('stats_quinielas.json'), 'rb') as f:
             ftp.storbinary('STOR stats_quinielas.json', f)
         ftp.quit()
         print("stats_quinielas.json subido exitosamente.")

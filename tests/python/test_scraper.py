@@ -81,21 +81,20 @@ class ExtraerSorteos(unittest.TestCase):
 
 
 class VentanaDeRastreo(unittest.TestCase):
-    """Rastrear «ayer» las 24 h duplicaba el tráfico sin aportar datos."""
+    """Cada página trae 14 jornadas, así que pedir «ayer» era tráfico inútil."""
 
     def _a_las(self, hora: int) -> list[str]:
         momento = datetime(2026, 9, 10, hora, 0, tzinfo=ZoneInfo(config.TIMEZONE))
         return scraper.fechas_a_rastrear(momento)
 
-    def test_de_madrugada_incluye_ayer(self):
-        self.assertEqual(self._a_las(3), ["2026-09-10", "2026-09-09"])
-
-    def test_pasada_la_hora_limite_solo_hoy(self):
+    def test_solo_pide_la_fecha_de_hoy(self):
+        self.assertEqual(self._a_las(3),  ["2026-09-10"])
         self.assertEqual(self._a_las(15), ["2026-09-10"])
 
-    def test_el_limite_es_exclusivo(self):
-        self.assertEqual(len(self._a_las(config.HORA_LIMITE_RASTREO_AYER)), 1)
-        self.assertEqual(len(self._a_las(config.HORA_LIMITE_RASTREO_AYER - 1)), 2)
+    def test_una_sola_peticion_por_loteria(self):
+        for hora in (0, 6, 12, 18, 23):
+            self.assertEqual(len(self._a_las(hora)), 1,
+                             f"a las {hora}:00 debe pedirse una sola fecha")
 
 
 class Respaldo(unittest.TestCase):
