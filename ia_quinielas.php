@@ -1,48 +1,27 @@
-<?php require_once 'security.php'; ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IA Predicción Quinielas - Lotería</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap');
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
-            overflow-x: hidden;
-        }
+<?php
+declare(strict_types=1);
 
-        .gradient-text {
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+require_once __DIR__ . '/app/bootstrap.php';
 
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
+$titulo    = 'Análisis de Quinielas — Retrasos y frecuencias';
+$tema      = 'tema-resultados';
+$conIconos = true;
+$claseBody = '';
 
-        .text-neon-teal { color: #2dd4bf; }
+$estilosPagina = <<<'CSS'
+.text-neon-teal { color: #2dd4bf; }
         .text-neon-purple { color: #a855f7; }
         .text-neon-pink { color: #ec4899; }
         .text-neon-yellow { color: #eab308; }
-
         .matrix-text {
             font-family: monospace;
             color: #2dd4bf;
             text-shadow: 0 0 8px rgba(45, 212, 191, 0.8);
         }
-    </style>
-</head>
-<body class="min-h-screen relative">
+CSS;
+require __DIR__ . '/app/views/cabecera.php';
+?>
+
     
     <!-- Background Grid -->
     <div class="fixed inset-0 z-0 opacity-20 pointer-events-none" style="background-image: linear-gradient(#334155 1px, transparent 1px), linear-gradient(90deg, #334155 1px, transparent 1px); background-size: 40px 40px;"></div>
@@ -478,5 +457,5 @@
             resEl.className = "text-8xl md:text-[10rem] font-black bg-gradient-to-b from-white to-gray-400 gradient-text drop-shadow-[0_5px_15px_rgba(0,0,0,1)]";
         }
     </script>
-</body>
-</html>
+
+<?php require __DIR__ . '/app/views/pie.php'; ?>

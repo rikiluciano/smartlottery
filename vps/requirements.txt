@@ -1,0 +1,7 @@
+# Dependencias de los scripts del VPS.
+#   python3 -m pip install -r vps/requirements.txt
+#
+# Las zonas horarias usan `zoneinfo`, de la biblioteca estándar desde
+# Python 3.9, en lugar de pytz.
+
+requests>=2.31,<3

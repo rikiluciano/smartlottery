@@ -1,44 +1,69 @@
-name: Deploy to InfinityFree FTP
+name: Desplegar al hosting
 
 on:
   push:
-    branches:
-      - master
-      - main
+    branches: [master, main]
+  workflow_dispatch:
+
+concurrency:
+  # Dos despliegues simultáneos por FTP dejarían el sitio a medias.
+  group: deploy-hosting
+  cancel-in-progress: false
 
 jobs:
-  web-deploy:
-    name: 🎉 Deploy
+  desplegar:
+    name: Compilar y publicar
     runs-on: ubuntu-latest
     steps:
-    - name: 🚚 Get latest code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 2
-    
-    - name: 📂 Sync files
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-      with:
-        server: ftpupload.net
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        server-dir: /htdocs/lottery/
-        exclude: |
-          **/.git*
-          **/.git*/**
-          **/node_modules/**
-          **/__pycache__/**
-          **/*.log
-          # Los scripts del VPS no pintan nada en el hosting público.
-          **/*.py
-          **/*.sh
-          # Credenciales: se suben a mano una sola vez y no se tocan.
-          secrets.php
-          secrets.example.php
-          .env
-          # Datos generados: los sube el VPS por FTP, no el deploy.
-          db_backup.json
-          historial_*.txt
-          *.flag
-          local_*
-          README.md
+      - uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar la hoja de estilos
+        run: npm run build:css
+
+      - name: Comprobar que el CSS se generó
+        run: test -s assets/css/app.css
+
+      - name: Publicar por FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER || 'ftpupload.net' }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /htdocs/lottery/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/__pycache__/**
+            **/.venv/**
+            **/*.log
+            # Los scripts del VPS no se ejecutan en el hosting.
+            vps/**
+            scripts/**
+            tests/**
+            # Fuentes de compilación: solo viaja el CSS ya generado.
+            assets/css/tailwind.src.css
+            tailwind.config.js
+            package.json
+            package-lock.json
+            # Credenciales: se suben a mano una vez y no se versionan.
+            secrets.php
+            secrets.example.php
+            .env
+            # Datos generados: los publica el VPS por FTP, no el despliegue.
+            db_backup.json
+            historial_*.txt
+            resultados_pendientes.json
+            history_*.json
+            *.flag
+            local_*
+            README.md

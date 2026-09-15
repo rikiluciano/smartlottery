@@ -1,11 +1,14 @@
 <?php
-require_once __DIR__ . '/config_db.php';
+declare(strict_types=1);
+
+require_once __DIR__ . '/app/bootstrap.php';
 header('Content-Type: application/json; charset=utf-8');
 
-// Permitir CORS por si acaso
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type");
+// Solo lo consume esta misma web: sin CORS abierto.
+Http::exigirMismoOrigen();
+if (!Http::dentroDeCuota('ia', 20, 600)) {
+    Http::error(429, 'Demasiadas consultas seguidas. Espera unos minutos.');
+}
 
 // Recibir datos JSON del POST
 $data = json_decode(file_get_contents('php://input'), true);
@@ -22,7 +25,11 @@ $juego = $data['juegoNombre'] ?? 'juego';
 $cantidadLoterias = intval($data['cantidadLoterias'] ?? 1);
 
 // OpenRouter API integration
-$openRouterApiKey = (string) cfg('openrouter_key');
+$openRouterApiKey = (string) Config::get('openrouter_key', '');
+if ($openRouterApiKey === '') {
+    error_log(basename(__FILE__) . ': falta openrouter_key en la configuración.');
+    Http::error(503, 'El análisis con IA no está disponible ahora mismo.');
+}
 
 $invF = "$" . number_format($inversionTotal, 2);
 $ganF = "$" . number_format($gananciaNetaFinal, 2);

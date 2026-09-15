@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   Tokens de color. Cada página puede sobrescribirlos añadiendo una
+   clase al <html>; los valores de aquí son los del panel de resultados.
+   ------------------------------------------------------------------ */
+:root {
+  --c-darkbg:       15 23 42;    /* #0f172a */
+  --c-neon-purple: 168 85 247;   /* #a855f7 */
+}
+
+/* Calculadora: fondo más profundo. */
+.tema-calculadora { --c-darkbg: 2 6 23; }          /* #020617 */
+
+/* Resultados y panel: violeta más claro. */
+.tema-resultados  { --c-neon-purple: 192 132 252; } /* #c084fc */
+
+@layer components {
+  .glass-panel {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-card {
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-card-old {
+    background: rgba(30, 41, 59, 0.9);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.02);
+    opacity: 0.85;
+  }
+
+  .glass-input {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    color: #f8fafc;
+  }
+  .glass-input:focus {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: #2dd4bf;
+    box-shadow: 0 0 15px rgba(45, 212, 191, 0.3);
+    outline: none;
+  }
+
+  .ball {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #0f172a;
+    box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.1), 0 3px 5px rgba(0, 0, 0, 0.3);
+  }
+  .ball-1 { background: #4ade80; }
+  .ball-2 { background: #facc15; }
+  .ball-3 { background: #f87171; }
+
+  .logo-img {
+    max-height: 28px;
+    max-width: 90px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.2));
+  }
+
+  .ai-loader {
+    width: 48px;
+    height: 48px;
+    border: 3px solid rgba(45, 212, 191, 0.2);
+    border-radius: 50%;
+    border-top-color: #2dd4bf;
+    animation: girar 1s ease-in-out infinite;
+  }
+  @keyframes girar { to { transform: rotate(360deg); } }
+
+  /* Fondo decorativo compartido por todas las páginas. */
+  .fondo-app::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url('../img/finance_bg.jpg');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.05;
+    pointer-events: none;
+    z-index: -1;
+    mix-blend-mode: screen;
+  }
+}
+
+@layer base {
+  body {
+    background-color: rgb(var(--c-darkbg));
+    color: #fff;
+  }
+  input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+  }
+  ::-webkit-scrollbar       { width: 8px; }
+  ::-webkit-scrollbar-track { background: rgb(var(--c-darkbg)); }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+  /* Respeta a quien pide menos movimiento en el sistema operativo. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------
+   Páginas de predicción (palés / súper palés)
+   ------------------------------------------------------------------ */
+@layer components {
+  .tema-prediccion .glass-panel {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    border-radius: 1rem;
+    box-shadow: none;
+  }
+  .neon-border:focus-within {
+    border-color: #2dd4bf;
+    box-shadow: 0 0 10px rgba(45, 212, 191, 0.5);
+  }
+  .gradient-text {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+  .scanline {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: rgba(45, 212, 191, 0.5);
+    opacity: 0.5;
+    animation: scanline 4s linear infinite;
+    pointer-events: none;
+    z-index: 50;
+  }
+  @keyframes scanline {
+    0%   { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+}

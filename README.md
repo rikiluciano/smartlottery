@@ -1,122 +1,248 @@
-<div align="center">
-  <img src="https://img.icons8.com/nolan/96/combo-chart.png" alt="Lottery AI Logo" width="100"/>
-  <h1>🌟 Lotería AI Analytics & Prediction Engine 🌟</h1>
-  <p><strong>Plataforma de grado empresarial para la extracción, análisis estadístico y predicción de resultados de lotería en tiempo real.</strong></p>
-  
-  <p>
-    <img src="https://img.shields.io/badge/Status-LIVE-success?style=for-the-badge&logo=appveyor" />
-    <img src="https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge&logo=python" />
-    <img src="https://img.shields.io/badge/PHP-8.x-purple?style=for-the-badge&logo=php" />
-    <img src="https://img.shields.io/badge/TailwindCSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" />
-    <img src="https://img.shields.io/badge/Architecture-Decoupled-orange?style=for-the-badge" />
-  </p>
-</div>
+# Lotería RD — Resultados y análisis estadístico
 
----
+Sistema que recopila los resultados de las loterías de República Dominicana,
+mantiene el historial y publica análisis estadísticos sobre él.
 
-## 📖 Resumen Ejecutivo (Visión General)
-
-El proyecto **Lottery AI** es un ecosistema completo y autónomo diseñado para analizar millones de combinaciones de lotería y detectar patrones matemáticos de manera instantánea. A diferencia de las plataformas tradicionales, este sistema emplea una **arquitectura desacoplada (Decoupled Architecture)** donde el trabajo pesado de minería de datos y análisis estadístico se realiza de manera privada y robusta en un servidor dedicado (VPS), mientras que el usuario final interactúa con una interfaz hiper-rápida que consume archivos estáticos pre-procesados.
-
-Esta infraestructura permite una escalabilidad masiva, latencia cero en la interfaz gráfica de usuario (GUI), y garantiza que la información mostrada sea precisa hasta el último minuto.
-
----
-
-## ✨ Características Principales (Core Features)
-
-- ⚡ **Extracción de Datos en Tiempo Real (Live Scraping):** Un *crawler* inteligente en Python audita la web minuto a minuto. Si hay un sorteo nuevo, lo captura inmediatamente.
-- 🧠 **Motor de Análisis Estadístico Profundo:** Capacidad para calcular retrasos y frecuencias de miles de combinaciones instantáneamente (Quinielas, Palés y Súper Palés).
-- 🚀 **Zero-Latency Frontend:** El frontend no requiere consultar bases de datos lentas (SQL). Lee archivos JSON pre-calculados a través de puentes PHP, lo que permite soportar miles de usuarios simultáneos sin colapsar.
-- 🛡️ **Pipeline Blindado y Deduplicado:** El lago de datos maestros (`db_backup.json`) incluye mecanismos matemáticos para evitar datos duplicados, sin importar cuántas veces pase el scraper.
-- 🔄 **Disparadores Inteligentes (Smart Triggers):** Para cuidar el ancho de banda y evitar penalizaciones de servidor, los algoritmos de predicción *solo* se ejecutan si el scraper detectó matemáticamente un resultado nuevo en ese minuto exacto.
-
----
-
-## 🏗️ Arquitectura del Sistema
-
-El proyecto está dividido en dos hemisferios sincronizados mediante FTP:
-
-```mermaid
-graph LR
-    subgraph "Backend - VPS (Ubuntu)"
-        A[Cron Job<br>1 Minuto] --> B(vps_scraper.py)
-        B -- Nuevos Datos --> C[(db_backup.json<br>Data Lake)]
-        B -- Dispara --> D[update_prediccion.py<br>Palés]
-        B -- Dispara --> E[update_quinielas.py<br>Quinielas]
-        B -- Dispara --> F[update_super_prediccion.py<br>Súper Palés]
-    end
-    
-    subgraph "Frontend - Hosting (InfinityFree)"
-        G[JSON API Wrappers]
-        H[UI: PHP + Tailwind CSS]
-    end
-    
-    D -. FTP Upload .-> G
-    E -. FTP Upload .-> G
-    F -. FTP Upload .-> G
-    
-    G --> H
+```
+┌─────────────────────────────┐        ┌──────────────────────────────┐
+│  VPS (Ubuntu)               │        │  Hosting (InfinityFree)      │
+│                             │        │                              │
+│  cron ──▶ vps/scraper.py    │        │  index.php      Calculadora  │
+│             │               │        │  resultados.php Resultados   │
+│             ├─ historiales  │  FTP   │  ia_*.php       Análisis     │
+│             ├─ db_backup    │ ─────▶ │  api_*.php      JSON         │
+│             └─ motores      │        │           │                  │
+│                de análisis  │        │           ▼                  │
+│                             │        │      MySQL (sorteos)         │
+└─────────────────────────────┘        └──────────────────────────────┘
 ```
 
----
-
-## 🔬 Módulos de Análisis (El Cerebro)
-
-El ecosistema contiene tres motores de análisis matemático, capaces de realizar en segundos lo que a un humano le tomaría meses:
-
-### 1. Motor de Súper Palés (`update_super_prediccion.py`)
-- **Misión:** Detectar cruces entre la *Primera posición* de dos loterías diferentes en el mismo día.
-- **Mecánica:** Toma los números ganadores del día en todas las loterías y genera combinaciones usando `itertools.combinations`. Examina el historial completo (años de datos) en menos de `0.4 segundos` directamente desde la memoria RAM para encontrar la única combinación de 100x100 (4,950 pares únicos) que **jamás ha salido junta en la historia**.
-- **Filtros Adicionales:** Separa las predicciones por categorías: General, Iniciales, Terminales y Compartidos.
-
-### 2. Motor de Palés Clásicos (`update_prediccion.py`)
-- **Misión:** Predecir combinaciones de dos números (Palés) dentro del *mismo* sorteo.
-- **Mecánica:** Mantiene un registro depurado de todos los palés generados históricamente (combinando posiciones 1-2, 1-3, 2-3 de cada sorteo) y descarta matemáticamente los que ya han salido hasta aislar los únicos "supervivientes".
-
-### 3. Motor de Quinielas (`update_quinielas.py`)
-- **Misión:** Identificar el nivel de "retraso" (ausencia) de los 100 números individuales (00-99).
-- **Mecánica:** Mide exactamente cuántos sorteos y días han pasado desde la última vez que apareció cada número en cada posición (Primera, Segunda, Tercera). Identifica tendencias y señala qué número está estadísticamente más presionado a salir (*Most Overdue*).
+El cálculo pesado corre en el VPS; el hosting solo presenta resultados ya
+calculados. Es una separación necesaria: el plan gratuito de InfinityFree
+tiene cuotas estrictas de consultas por hora y tiempo de ejecución.
 
 ---
 
-## 💻 El Frontend (Experiencia de Usuario)
+## Qué hace cada parte
 
-El cliente final visualiza la inteligencia del servidor a través de una aplicación web de última generación:
+### Recolección — `vps/scraper.py`
 
-- **Estética "Dark Mode Neon":** Desarrollada con **Tailwind CSS**, incluye gradientes dinámicos, sombras de neón, y tipografía moderna que emula un centro de comandos de alta tecnología.
-- **API Wrappers en PHP:** Scripts como `api_super_prediccion.php` actúan como escudos. Toman el JSON estático inyectado por el VPS y lo sirven con los encabezados CORS correctos, aislando el alojamiento de la lógica pesada.
-- **Diseño Responsivo:** Funciona perfectamente en dispositivos móviles y monitores ultra anchos.
+Lee las páginas de resultados de las 43 loterías del catálogo
+(`vps/loterias.py`) y extrae los sorteos del bloque JSON-LD que publica el
+origen. Usar datos estructurados en vez de parsear HTML hace la extracción
+estable frente a cambios de maquetación.
 
-### Estructura de Archivos (Frontend)
-- `index.php`: Panel de control principal (Dashboard) con navegación interactiva.
-- `resultados.php`: Visor interactivo del historial y resultados de hoy en tiempo real.
-- `ia_prediccion_pale.php`: Interfaz gráfica de los Palés regulares.
-- `ia_prediccion_super_pale.php`: Interfaz gráfica exclusiva de Súper Palés.
-- `ia_quinielas.php`: Interfaz gráfica detallada de Quinielas.
+En cada pasada:
+
+1. Toma un cerrojo. Si la pasada anterior sigue viva, esta termina sin hacer
+   nada — el rastreo puede durar más de un minuto y el cron dispara cada minuto.
+2. Rastrea el día de hoy. Solo antes de las 10:00 rastrea también el día
+   anterior, cuando el origen publica los resultados tardíos.
+3. Compara con `db_backup.json`. **Si no hay sorteos nuevos, termina ahí**:
+   no recalcula ni sube nada.
+4. Si los hay, actualiza los historiales, dispara los motores de análisis y
+   publica el JSON en el hosting.
+
+### Motores de análisis
+
+| Script | Qué calcula |
+|---|---|
+| `vps/update_prediccion.py` | Palés (pares dentro de un mismo sorteo) que llevan más tiempo sin aparecer |
+| `vps/update_super_prediccion.py` | Súper palés: cruces entre las primeras posiciones de dos loterías el mismo día |
+| `vps/update_quinielas.py` | Retraso de cada número 00–99 por posición |
+| `vps/calc_stats.py` | Frecuencias, última aparición y números acompañantes |
+
+Los tres primeros recorren el historial hacia atrás descartando combinaciones
+ya salidas, hasta aislar la que lleva más tiempo sin aparecer.
+
+> **Qué significan estos números.** Describen el historial: cuánto hace que
+> salió cada combinación y con qué frecuencia aparece. No predicen el próximo
+> sorteo. Cada sorteo es un evento independiente, y una combinación que lleva
+> 800 días sin salir tiene exactamente la misma probabilidad que cualquier
+> otra. La utilidad del sistema está en visualizar el historial, no en
+> anticipar resultados.
+
+### Frontend
+
+| Archivo | Página |
+|---|---|
+| `index.php` | Calculadora de estrategias de inversión |
+| `resultados.php` | Resultados del día y consulta por fecha |
+| `ia_quinielas.php` | Retrasos y frecuencias de los números |
+| `ia_prediccion_pale.php` | Palés pendientes |
+| `ia_prediccion_super_pale.php` | Súper palés pendientes |
+| `panel_admin.php` | Panel de administración (requiere autenticación) |
+
+Las páginas de palés y súper palés comparten una sola plantilla
+(`app/views/pagina_prediccion.php`) parametrizada.
 
 ---
 
-## ⚙️ Funcionamiento Automático (Ciclo de Vida)
+## Estructura
 
-El sistema nunca duerme. Esta es la cronología de lo que ocurre en el servidor *cada 60 segundos*:
+```
+├── app/                  Capa compartida de PHP — sin acceso web
+│   ├── bootstrap.php     Arranque: configuración, zona horaria, errores
+│   ├── Config.php        Secretos desde entorno o secrets.php
+│   ├── Database.php      Conexión PDO
+│   ├── Auth.php          Autenticación del panel
+│   ├── Http.php          Cabeceras, JSON, escapado, cuotas
+│   ├── Lotteries.php     Catálogo: familias, logos, horarios
+│   ├── Ingest.php        Validación y guardado de sorteos
+│   ├── Results.php       Consulta y ordenación
+│   ├── ResultsPage.php   Modelo de vista de resultados
+│   └── views/            Plantillas compartidas
+├── assets/               CSS compilado, logos, imágenes
+├── components/           Componentes de vista
+├── vps/                  Scripts del servidor (no se despliegan al hosting)
+├── scripts/              Utilidades de línea de comandos
+├── tests/                Suites de PHP y Python
+└── *.php                 Páginas y endpoints (raíz web)
+```
 
-1. **Minuto 00:00:00** ➔ Linux Cron ejecuta `vps_scraper.py`.
-2. **Minuto 00:00:02** ➔ El scraper rastrea las páginas de resultados.
-3. **Minuto 00:00:05** ➔ Compara los datos recién leídos con el maestro local (`db_backup.json`). 
-   - *¿No hay sorteos nuevos?* El script termina silenciosamente, ahorrando recursos.
-   - *¿Hay sorteos nuevos?* Se procede al paso 4.
-4. **Minuto 00:00:06** ➔ Inyecta los nuevos datos, verificando que no existan duplicados, al disco duro local.
-5. **Minuto 00:00:07** ➔ Dispara de manera instantánea a los 3 algoritmos de inteligencia artificial.
-6. **Minuto 00:00:10** ➔ Los algoritmos suben los archivos `.json` procesados al servidor público vía FTP.
-7. **Minuto 00:00:12** ➔ La página web se actualiza instantáneamente para los usuarios a nivel mundial con datos frescos de hace unos segundos.
+`app/`, `vps/`, `tests/` y `scripts/` están bloqueados en `.htaccess`. En
+InfinityFree no se puede colocar código fuera de la raíz web —`htdocs` es el
+DocumentRoot— así que la separación se aplica a nivel de servidor.
 
 ---
 
-## 🔒 Estabilidad y Escalabilidad Futura
+## Puesta en marcha
 
-- **Data Lake Autónomo:** Toda la información histórica está centralizada en un archivo maestro inmutable en un entorno privado.
-- **Independencia del Hosting Web:** Si el proveedor del frontend colapsa, cambia de dueño o sufre una caída, el VPS sigue minando y aprendiendo imperturbable. Solo es cuestión de conectar un nuevo frontend al FTP y el sistema sigue operando.
-- **Resistencia Anti-DDoS:** Al no usar bases de datos expuestas al público (MySQL, PostgreSQL) para el sitio web, cualquier intento de saturar el servidor mediante consultas masivas fracasará, pues el frontend solo lee archivos de texto estático y ultraligeros.
+### Requisitos
+
+- PHP 8.1 o superior con `pdo_mysql`, `curl` y `mbstring`
+- Python 3.9 o superior en el VPS
+- Node 18 o superior para compilar la hoja de estilos
+
+### 1. Credenciales
+
+Ningún secreto vive en el repositorio. Copia la plantilla y rellénala:
+
+```bash
+cp secrets.example.php secrets.php
+```
+
+Genera el hash de la contraseña del panel:
+
+```bash
+php -r "echo password_hash('tu-clave', PASSWORD_DEFAULT), PHP_EOL;"
+```
+
+Y un token de ingesta:
+
+```bash
+php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
+```
+
+`secrets.php` está en `.gitignore` y excluido del despliegue: se sube al
+hosting una sola vez, a mano.
+
+### 2. Base de datos
+
+```bash
+php scripts/migrar.php
+```
+
+### 3. Hoja de estilos
+
+```bash
+npm install
+npm run build:css      # genera assets/css/app.css
+npm run watch:css      # recompila al guardar, durante el desarrollo
+```
+
+### 4. VPS
+
+```bash
+python3 -m pip install -r vps/requirements.txt
+```
+
+Credenciales en `/etc/lottery.env`, con permisos `600`:
+
+```bash
+LOTTERY_FTP_USER=...
+LOTTERY_FTP_PASS=...
+LOTTERY_INGEST_TOKEN=...          # el mismo que en secrets.php
+LOTTERY_DATA_DIR=/home/ubuntu
+```
+
+Cron:
+
+```cron
+* * * * * set -a; . /etc/lottery.env; set +a; cd /home/ubuntu && python3 -m vps.scraper >> /var/log/lottery.log 2>&1
+```
+
+El cerrojo interno evita que dos pasadas se solapen, así que el intervalo de
+un minuto es seguro.
+
+### 5. Despliegue
+
+`git push` a `master` dispara el workflow: compila el CSS y publica por FTP.
+Necesita dos secretos en GitHub — *Settings → Secrets → Actions*:
+
+- `FTP_USERNAME`
+- `FTP_PASSWORD`
 
 ---
-*Desarrollado y arquitectado con precisión técnica de nivel Enterprise.*
+
+## Desarrollo
+
+```bash
+# Servidor local
+php -S localhost:8000
+
+# Pruebas
+php tests/run.php                                  # PHP
+python3 -m unittest discover -s tests/python -t .  # Python
+```
+
+Para ver los errores en pantalla durante el desarrollo, pon
+`'app_env' => 'development'` en `secrets.php`. En producción los errores van
+solo al log: un aviso de PDO mostrado al visitante filtra las credenciales de
+conexión.
+
+La integración continua comprueba en cada push la sintaxis de PHP y Python,
+ejecuta ambas suites, verifica que el CSS compila y **falla si detecta
+credenciales en el código**.
+
+---
+
+## Decisiones de diseño
+
+**Los resultados llegan por FTP, no por HTTP.** InfinityFree sirve un desafío
+JavaScript a todo cliente que no sea un navegador, así que el scraper no puede
+llamar a `guardar_resultados.php` directamente. En su lugar deja un JSON por
+FTP que la web absorbe en la siguiente carga de página. El endpoint HTTP existe
+y funciona, pero solo es útil desde un origen que supere el desafío.
+
+**El frontend lee JSON precalculado, no la base de datos.** Los análisis
+tardarían más que el límite de ejecución de PHP en el hosting compartido.
+
+**Respaldo en disco.** Si MySQL no responde —cuota horaria agotada, caída del
+hosting—, la página sirve `db_backup.json` en lugar de mostrarse vacía.
+
+**Ventana de 90 días en la consulta.** La portada solo necesita el último
+resultado de cada lotería. Acotar el rango mantiene el coste constante aunque
+el historial crezca durante años.
+
+---
+
+## Limitaciones conocidas
+
+- **Font Awesome se carga desde CDN.** Sustituirlo por SVG en línea eliminaría
+  la última dependencia externa; requiere reemplazar los iconos uno a uno.
+- **`vps/calc_stats_extendido.py`** es una versión más rica de las estadísticas
+  (coocurrencias, desglose por posición) que no está conectada al frontend.
+- **El panel de administración usa HTTP Basic.** Suficiente para un solo
+  administrador sobre HTTPS; si hacen falta varios usuarios o registro de
+  actividad, hay que pasar a sesiones.
+- **Cuotas del hosting gratuito.** El plan de InfinityFree limita consultas por
+  hora; el respaldo en disco mitiga el efecto, pero no lo elimina.
+
+---
+
+## Aviso
+
+Este sitio ofrece información estadística sobre sorteos ya celebrados. No
+predice resultados futuros ni garantiza ganancia alguna. Juega con
+responsabilidad.

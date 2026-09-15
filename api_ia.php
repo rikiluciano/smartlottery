@@ -1,88 +1,59 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Proxy de servidor para OpenRouter.
  *
- * Motivo: index.php y ia_quinielas.php llamaban a OpenRouter desde JavaScript
- * con la clave incrustada, por lo que la clave se enviaba a cada visitante.
- * Ahora la clave vive solo en secrets.php y nunca sale del servidor.
+ * Antes index.php e ia_quinielas.php llamaban a OpenRouter desde JavaScript
+ * con la clave incrustada en el HTML, así que la clave llegaba al navegador
+ * de cada visitante. Ahora vive solo en secrets.php.
  *
- * Contra el abuso (la clave sigue siendo gratuita pero limitada):
+ * Como la clave es de uso gratuito y limitada, el proxy se protege con:
  *   - solo POST y solo desde el propio dominio
  *   - lista blanca de modelos
- *   - tope de max_tokens
- *   - límite por IP (ventana deslizante en disco)
+ *   - tope de tokens y de longitud del prompt
+ *   - cuota por IP
  */
 
-require_once __DIR__ . '/config_db.php';
+require_once __DIR__ . '/app/bootstrap.php';
 
-header('Content-Type: application/json; charset=utf-8');
-
+/** Modelos que este sitio puede usar. Cualquier otro se rechaza. */
 const MODELOS_PERMITIDOS = [
     'nvidia/nemotron-3-ultra-550b-a55b:free',
     'nvidia/nemotron-3-super-120b-a12b:free',
     'nvidia/llama-3.1-nemotron-70b-instruct:free',
     'minimax/minimax-m3:free',
 ];
-const MAX_TOKENS_TOPE  = 3000;
-const MAX_CHARS_PROMPT = 12000;
-const LIMITE_POR_IP    = 20;    // peticiones…
-const VENTANA_SEGUNDOS = 600;   // …por cada 10 minutos
+const MAX_TOKENS        = 3000;
+const MAX_CHARS_PROMPT  = 12000;
+const CUOTA_PETICIONES  = 20;
+const CUOTA_VENTANA_SEG = 600;
 
-function fallo(int $codigo, string $mensaje): void
-{
-    http_response_code($codigo);
-    echo json_encode(['error' => ['message' => $mensaje]]);
-    exit;
+Http::exigirMetodo('POST');
+Http::exigirMismoOrigen();
+
+if (!Http::dentroDeCuota('ia', CUOTA_PETICIONES, CUOTA_VENTANA_SEG)) {
+    Http::error(429, 'Has hecho muchas consultas seguidas. Espera unos minutos.');
 }
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-    fallo(405, 'Método no permitido');
-}
-
-// Solo peticiones originadas en el propio sitio.
-$origen = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '';
-$hostPropio = $_SERVER['HTTP_HOST'] ?? '';
-if ($origen !== '' && $hostPropio !== '' && stripos($origen, $hostPropio) === false) {
-    fallo(403, 'Origen no permitido');
-}
-
-$clave = (string) cfg('openrouter_key');
+$clave = (string) Config::get('openrouter_key', '');
 if ($clave === '') {
-    error_log('api_ia: falta openrouter_key en secrets.php');
-    fallo(503, 'Servicio de IA no configurado');
+    error_log('api_ia: falta openrouter_key en la configuración.');
+    Http::error(503, 'El análisis con IA no está disponible ahora mismo.');
 }
 
-// ---- Límite por IP ----
-$ip      = $_SERVER['REMOTE_ADDR'] ?? 'desconocida';
-$archivo = sys_get_temp_dir() . '/ia_rate_' . sha1($ip) . '.json';
-$ahora   = time();
-$marcas  = [];
-if (is_readable($archivo)) {
-    $marcas = json_decode((string) file_get_contents($archivo), true) ?: [];
-}
-$marcas = array_values(array_filter(
-    $marcas,
-    static fn($t) => is_int($t) && ($ahora - $t) < VENTANA_SEGUNDOS
-));
-if (count($marcas) >= LIMITE_POR_IP) {
-    fallo(429, 'Demasiadas consultas. Espera unos minutos.');
-}
-$marcas[] = $ahora;
-@file_put_contents($archivo, json_encode($marcas), LOCK_EX);
-
-// ---- Validar el cuerpo ----
 $entrada = json_decode((string) file_get_contents('php://input'), true);
-if (!is_array($entrada) || !isset($entrada['messages']) || !is_array($entrada['messages'])) {
-    fallo(400, 'Cuerpo inválido');
+if (!is_array($entrada) || !is_array($entrada['messages'] ?? null)) {
+    Http::error(400, 'Petición mal formada.');
 }
 
 $modelo = (string) ($entrada['model'] ?? MODELOS_PERMITIDOS[0]);
 if (!in_array($modelo, MODELOS_PERMITIDOS, true)) {
-    fallo(400, 'Modelo no permitido');
+    Http::error(400, 'Modelo no permitido.');
 }
 
 $mensajes = [];
-$totalChars = 0;
+$caracteres = 0;
 foreach ($entrada['messages'] as $m) {
     if (!is_array($m) || !isset($m['role'], $m['content'])) {
         continue;
@@ -90,59 +61,67 @@ foreach ($entrada['messages'] as $m) {
     if (!in_array($m['role'], ['system', 'user', 'assistant'], true)) {
         continue;
     }
+
     $contenido = (string) $m['content'];
-    $totalChars += strlen($contenido);
-    if ($totalChars > MAX_CHARS_PROMPT) {
-        fallo(413, 'Prompt demasiado largo');
+    $caracteres += strlen($contenido);
+    if ($caracteres > MAX_CHARS_PROMPT) {
+        Http::error(413, 'La consulta es demasiado larga.');
     }
+
     $mensajes[] = ['role' => $m['role'], 'content' => $contenido];
 }
-if (!$mensajes) {
-    fallo(400, 'Sin mensajes válidos');
+
+if ($mensajes === []) {
+    Http::error(400, 'No hay mensajes que enviar.');
 }
 
-$maxTokens = (int) ($entrada['max_tokens'] ?? 1500);
-$maxTokens = max(1, min($maxTokens, MAX_TOKENS_TOPE));
+$peticion = [
+    'model'      => $modelo,
+    'messages'   => $mensajes,
+    'max_tokens' => max(1, min((int) ($entrada['max_tokens'] ?? 1500), MAX_TOKENS)),
+];
 
-$cuerpo = ['model' => $modelo, 'messages' => $mensajes, 'max_tokens' => $maxTokens];
-if (!empty($entrada['models']) && is_array($entrada['models'])) {
-    $alternativos = array_values(array_intersect($entrada['models'], MODELOS_PERMITIDOS));
-    if ($alternativos) {
-        $cuerpo['models'] = $alternativos;
-    }
+// Modelos de respaldo, filtrados también contra la lista blanca.
+$respaldos = array_values(array_intersect(
+    is_array($entrada['models'] ?? null) ? $entrada['models'] : [],
+    MODELOS_PERMITIDOS
+));
+if ($respaldos !== []) {
+    $peticion['models'] = $respaldos;
 }
 
-// ---- Reenviar a OpenRouter ----
-$ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
-curl_setopt_array($ch, [
+$curl = curl_init('https://openrouter.ai/api/v1/chat/completions');
+curl_setopt_array($curl, [
     CURLOPT_POST           => true,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT        => 90,
+    CURLOPT_CONNECTTIMEOUT => 10,
     CURLOPT_HTTPHEADER     => [
         'Authorization: Bearer ' . $clave,
         'Content-Type: application/json',
-        'HTTP-Referer: https://' . $hostPropio,
-        'X-Title: Lottery Analytics',
+        'HTTP-Referer: https://' . ($_SERVER['HTTP_HOST'] ?? 'localhost'),
+        'X-Title: Loteria RD Analytics',
     ],
-    CURLOPT_POSTFIELDS     => json_encode($cuerpo),
+    CURLOPT_POSTFIELDS     => json_encode($peticion),
 ]);
-$respuesta = curl_exec($ch);
-$estado    = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$errCurl   = curl_error($ch);
-curl_close($ch);
+
+$respuesta = curl_exec($curl);
+$estado    = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+$errorCurl = curl_error($curl);
+curl_close($curl);
 
 if ($respuesta === false) {
-    error_log('api_ia: curl — ' . $errCurl);
-    fallo(502, 'No se pudo contactar el servicio de IA');
+    error_log('api_ia: curl — ' . $errorCurl);
+    Http::error(502, 'No se pudo contactar con el servicio de IA.');
 }
 
-// Devolver solo el texto: el cliente no necesita ver la respuesta cruda del proveedor.
 $datos = json_decode((string) $respuesta, true);
 $texto = $datos['choices'][0]['message']['content'] ?? null;
 
-if ($estado >= 400 || $texto === null) {
-    error_log('api_ia: OpenRouter HTTP ' . $estado . ' — ' . substr((string) $respuesta, 0, 500));
-    fallo(502, 'El servicio de IA no devolvió un análisis');
+if ($estado >= 400 || !is_string($texto)) {
+    error_log('api_ia: OpenRouter HTTP ' . $estado . ' — ' . substr((string) $respuesta, 0, 300));
+    Http::error(502, 'El servicio de IA no devolvió un análisis.');
 }
 
-echo json_encode(['content' => $texto], JSON_UNESCAPED_UNICODE);
+// Se devuelve solo el texto: el cliente no necesita la respuesta cruda.
+Http::json(['content' => $texto]);

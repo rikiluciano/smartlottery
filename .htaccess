@@ -1,5 +1,5 @@
 # ============================================================
-#  Seguridad y reescritura — InfinityFree / Apache
+#  Seguridad y reescritura — raíz web (InfinityFree / Apache)
 # ============================================================
 
 RewriteEngine On
@@ -12,43 +12,51 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # ---- No listar directorios ----
 Options -Indexes
 
-# ---- URLs limpias: /resultados -> resultados.php ----
+# ---- URLs limpias: /resultados sirve resultados.php ----
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^([^\.]+)$ $1.php [NC,L]
 
-# ---- Archivos que nunca deben servirse ----
-# Datos crudos, fuentes del VPS, configuración y artefactos de depuración.
-<FilesMatch "\.(json|py|md|sh|flag|txt|sqlite|db|log|out|yml|example\.php)$">
+# ---- Directorios que nunca deben servirse por web ----
+# En InfinityFree no se puede situar código fuera de la raíz web (htdocs es
+# el DocumentRoot), así que la separación se hace aquí. Por eso `app/` es la
+# única capa con lógica y está cerrada a cal y canto.
+RewriteRule ^(app|vps|tests|scripts|node_modules)/ - [F,L]
+
+# ---- Extensiones que no se sirven nunca ----
+# Los JSON de datos se exponen a través de los envoltorios api_*.php, que
+# añaden cabeceras de caché y un 404 correcto.
+<FilesMatch "\.(json|py|md|sh|lock|flag|txt|sqlite|db|log|out|yml|yaml|dist|src\.css)$">
     Require all denied
 </FilesMatch>
-
-# Excepción: el manifiesto público, si algún día se añade.
-<Files "manifest.json">
-    Require all granted
-</Files>
 
 # ---- Configuración y credenciales ----
-<FilesMatch "^(config_db|secrets|secrets\.example|security)\.php$">
+<FilesMatch "^(secrets|secrets\.example|tailwind\.config|package(-lock)?)\.(php|js|json)$">
     Require all denied
 </FilesMatch>
 
-# ---- Panel de administración: restringir por IP ----
-# Sustituir por la IP fija desde la que se administra. Mientras esté en
-# 127.0.0.1 el panel queda cerrado a internet, que es el estado seguro por
-# defecto: antes era accesible por cualquiera sin autenticación.
-<Files "panel_admin.php">
-    Require ip 127.0.0.1
-</Files>
+# ---- Cabeceras de seguridad para todo lo estático ----
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ---- Caché larga para assets con versión en la URL ----
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css                "access plus 1 year"
+    ExpiresByType image/svg+xml           "access plus 1 year"
+    ExpiresByType image/jpeg              "access plus 6 months"
+    ExpiresByType application/javascript  "access plus 1 month"
+</IfModule>
 
 # ---- Filtro básico de inyección en la query string ----
 RewriteCond %{QUERY_STRING} (?:%27|'|%22|").*(?:%20|\s|%2B|\+)*(?:union|select|insert|update|delete|drop|truncate) [NC,OR]
 RewriteCond %{QUERY_STRING} (?:%3C|<).*script.*(?:%3E|>) [NC]
 RewriteRule ^ - [F]
 
-# NOTA: aquí había un bloqueo por User-Agent que incluía los patrones
-# `bot`, `spider` y `crawler`. Eso rechazaba a Googlebot, Bingbot y a
-# cualquier buscador — el sitio quedaba invisible para el SEO — y además
-# bloqueaba a los propios scrapers del VPS (`python-requests`).
-# Si hace falta frenar abuso, el camino correcto es limitar por tasa,
-# no por cadena de User-Agent.
+# NOTA: aquí hubo un bloqueo por User-Agent con los patrones `bot`, `spider`
+# y `crawler`. Rechazaba a Googlebot y a Bingbot —el sitio era invisible para
+# los buscadores— y de paso a los propios scrapers del VPS. Para frenar abuso
+# el camino es limitar por tasa, no filtrar cadenas de User-Agent.

@@ -1,0 +1,13 @@
+{
+  "name": "smartlottery",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Compilación de la hoja de estilos. Sustituye al CDN de Tailwind, que compilaba en el navegador en cada carga.",
+  "scripts": {
+    "build:css": "tailwindcss -i assets/css/tailwind.src.css -o assets/css/app.css --minify",
+    "watch:css": "tailwindcss -i assets/css/tailwind.src.css -o assets/css/app.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

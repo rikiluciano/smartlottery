@@ -1,6 +1,13 @@
 <?php
-require_once __DIR__ . '/config_db.php';
-header('Content-Type: application/json');
+declare(strict_types=1);
+
+require_once __DIR__ . '/app/bootstrap.php';
+header('Content-Type: application/json; charset=utf-8');
+
+Http::exigirMismoOrigen();
+if (!Http::dentroDeCuota('ia', 20, 600)) {
+    Http::error(429, 'Demasiadas consultas seguidas. Espera unos minutos.');
+}
 
 $target_nums = $_REQUEST['target'] ?? null;
 $es_digito = isset($_REQUEST['es_digito']) && $_REQUEST['es_digito'] === 'true';
@@ -51,7 +58,11 @@ if (!$es_digito) {
 }
 
 // Configurar el LLM
-$openRouterApiKey = (string) cfg('openrouter_key');
+$openRouterApiKey = (string) Config::get('openrouter_key', '');
+if ($openRouterApiKey === '') {
+    error_log(basename(__FILE__) . ': falta openrouter_key en la configuración.');
+    Http::error(503, 'El análisis con IA no está disponible ahora mismo.');
+}
 $prompt = "Actúa como un experto analista estadístico de loterías.\n";
 $prompt .= "Se ha detectado que el número (o dígito) más rezagado matemáticamente es el {$target}.\n\n";
 $prompt .= "Aquí están las estadísticas ESTRICTAS reales calculadas de una base de datos de 35,000 sorteos:\n";

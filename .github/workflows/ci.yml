@@ -1,0 +1,90 @@
+name: Integración continua
+
+on:
+  push:
+    branches: [master, main, depuracion]
+  pull_request:
+
+jobs:
+  php:
+    name: PHP — sintaxis y pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_mysql, pdo_sqlite, curl, mbstring
+          coverage: none
+
+      - name: Comprobar sintaxis de todos los .php
+        run: |
+          fallos=0
+          while IFS= read -r archivo; do
+            php -l "$archivo" >/dev/null 2>&1 || { echo "::error file=$archivo::error de sintaxis"; fallos=1; }
+          done < <(find . -name '*.php' -not -path './node_modules/*')
+          exit $fallos
+
+      - name: Ejecutar la suite
+        run: php tests/run.php
+
+      - name: Verificar que no hay secretos en el código
+        run: |
+          # El patrón se arma por trozos para que este archivo no se detecte
+          # a sí mismo. Cubre las familias de credenciales que el proyecto usa.
+          p1='sk-''or-v1-[0-9a-f]{20}'      # OpenRouter
+          p2='nv''api-[A-Za-z0-9_-]{20}'    # NVIDIA
+          p3='gh''p_[A-Za-z0-9]{36}'        # GitHub
+          p4='sb_''publishable_[A-Za-z0-9_-]{10}'
+          p5='sb_''secret_[A-Za-z0-9_-]{10}'
+          p6='AKIA[0-9A-Z]{16}'             # AWS
+          p7="password\s*=\s*[\"'][^\"'$][^\"']{6,}[\"']"
+
+          encontrados=0
+          for patron in "$p1" "$p2" "$p3" "$p4" "$p5" "$p6" "$p7"; do
+            if grep -rInE "$patron" \
+                 --exclude-dir=.git --exclude-dir=node_modules \
+                 --exclude='ci.yml' --exclude='secrets.example.php' . ; then
+              encontrados=1
+            fi
+          done
+
+          if [ "$encontrados" -eq 1 ]; then
+            echo "::error::Se encontraron credenciales en el código."
+            exit 1
+          fi
+          echo "Sin credenciales en el código."
+
+  python:
+    name: Python — sintaxis y pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias
+        run: python -m pip install -r vps/requirements.txt
+
+      - name: Comprobar compilación
+        run: python -m compileall -q vps tests
+
+      - name: Ejecutar la suite
+        run: python -m unittest discover -s tests/python -t .
+
+  css:
+    name: CSS — compilación
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run build:css
+      - name: Comprobar que se generó
+        run: test -s assets/css/app.css

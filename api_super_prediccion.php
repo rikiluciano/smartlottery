@@ -1,9 +1,8 @@
 <?php
-header('Content-Type: application/json');
-$cache_file = __DIR__ . '/super_prediccion.json';
-if (file_exists($cache_file)) {
-    echo file_get_contents($cache_file);
-} else {
-    echo json_encode(['error' => 'No hay super prediccion disponible']);
-}
-?>
+declare(strict_types=1);
+
+/** Sirve el JSON que el VPS deja por FTP. */
+
+require_once __DIR__ . '/app/bootstrap.php';
+
+Http::servirArchivoJson(APP_RAIZ . '/super_prediccion.json');

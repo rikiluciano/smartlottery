@@ -1,126 +1,22 @@
-<?php require_once 'security.php'; ?>
-<!DOCTYPE html>
-<html lang="es">
+<?php
+declare(strict_types=1);
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calculadora Estratégica RLabs Premium</title>
-  
-  <!-- Tipografía Premium -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Configuración personalizada de Tailwind -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            display: ['Plus Jakarta Sans', 'sans-serif'],
-          },
-          colors: {
-            darkbg: '#020617',
-            gold: {
-              300: '#FDE047',
-              400: '#FACC15',
-              500: '#EAB308',
-            },
-            neon: {
-              teal: '#2DD4BF',
-              purple: '#A855F7',
-              cyan: '#22D3EE'
-            }
-          },
-          animation: {
-            'blob': 'blob 7s infinite',
-            'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
-            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-          },
-          keyframes: {
-            blob: {
-              '0%': { transform: 'translate(0px, 0px) scale(1)' },
-              '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-              '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-              '100%': { transform: 'translate(0px, 0px) scale(1)' },
-            },
-            fadeInUp: {
-              '0%': { opacity: '0', transform: 'translateY(20px)' },
-              '100%': { opacity: '1', transform: 'translateY(0)' },
-            }
-          }
-        }
-      }
-    }
-  </script>
+require_once __DIR__ . '/app/bootstrap.php';
 
-  <link rel="stylesheet" href="resultado/RLabs/rlabs-footer.css?v=2">
-  
-  <style>
-    body::before {
-      content: "";
-      position: fixed;
-      top: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 100%;
-      background-image: url('finance_bg.jpg');
-      background-size: cover;
-      background-position: center;
-      opacity: 0.05;
-      pointer-events: none;
-      z-index: -1;
-      mix-blend-mode: screen;
-    }
+$titulo    = 'Calculadora Estratégica — Lotería RD';
+$tema      = 'tema-calculadora';
+$conIconos = false;
+$claseBody = 'bg-darkbg text-gray-200 flex flex-col overflow-x-hidden selection:bg-neon-teal selection:text-darkbg';
 
-    /* Efecto Glassmorphism Premium */
-    .glass-panel {
-      background: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.05);
-    }
-    
-    .glass-input {
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      transition: all 0.3s ease;
-      color: #F8FAFC;
-    }
-    
-    .glass-input:focus {
-      background: rgba(0, 0, 0, 0.5);
-      border-color: #2DD4BF;
-      box-shadow: 0 0 15px rgba(45, 212, 191, 0.3);
-      outline: none;
-    }
-
+$estilosPagina = <<<'CSS'
+/* Efecto Glassmorphism Premium */
     /* Scrollbar invisible pero funcional */
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: #020617; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
-    
     /* Animación del Loader de IA */
-    .ai-loader {
-      width: 48px;
-      height: 48px;
-      border: 3px solid rgba(45, 212, 191, 0.2);
-      border-radius: 50%;
-      border-top-color: #2DD4BF;
-      animation: spin 1s ease-in-out infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
-</head>
+     }
+CSS;
+require __DIR__ . '/app/views/cabecera.php';
+?>
 
-<body class="bg-darkbg text-gray-200 min-h-screen flex flex-col relative overflow-x-hidden selection:bg-neon-teal selection:text-darkbg">
   
   <!-- Background Animated Blobs (Elementos de diseño de lujo) -->
   <div class="fixed inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
@@ -256,7 +152,7 @@
           
           <div class="flex items-center space-x-3 mb-6 relative z-10">
             <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-neon-purple/20 to-neon-teal/20 flex items-center justify-center border border-white/10 overflow-hidden shadow-[0_0_15px_rgba(45,212,191,0.3)]">
-              <img src="ai_avatar.jpg" alt="AI Bot" class="w-full h-full object-cover mix-blend-lighten opacity-90">
+              <img src="assets/img/ai_avatar.jpg" alt="AI Bot" class="w-full h-full object-cover mix-blend-lighten opacity-90">
             </div>
             <h3 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neon-purple to-neon-teal">Análisis Estratégico de IA</h3>
           </div>
@@ -297,9 +193,9 @@
 
   <!-- RLabs Premium Footer -->
   <div id="rlabs-footer-container" class="mt-20"></div>
-  <script src="resultado/RLabs/rlabs-footer.js" defer></script>
+  <script src="assets/footer/rlabs-footer.js" defer></script>
   <script>
-    fetch('resultado/RLabs/rlabs-footer.html')
+    fetch('assets/footer/rlabs-footer.html')
       .then(response => response.text())
       .then(html => {
         document.getElementById('rlabs-footer-container').innerHTML = html;
@@ -620,5 +516,5 @@ Por favor, genera tu análisis siguiendo las instrucciones. Si es rentable, dame
     // Cargar datos cacheados al iniciar
     document.addEventListener('DOMContentLoaded', cargarDatos);
   </script>
-</body>
-</html>
+
+<?php require __DIR__ . '/app/views/pie.php'; ?>

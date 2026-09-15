@@ -15,6 +15,15 @@ return [
     //   php -r "echo bin2hex(random_bytes(32));"
     'ingest_token' => 'PON_AQUI_UN_TOKEN_ALEATORIO_LARGO',
 
-    // Clave de OpenRouter. Debe usarse SOLO en servidor, nunca en JS.
+    // Clave de OpenRouter. La usa api_ia.php en el servidor; nunca en JS.
     'openrouter_key' => 'sk-or-v1-...',
+
+    // Panel de administración. Generar el hash con:
+    //   php -r "echo password_hash('tu-clave', PASSWORD_DEFAULT), PHP_EOL;"
+    'admin_user'          => 'admin',
+    'admin_password_hash' => '$2y$12$...',
+
+    // 'production' oculta los errores al visitante; 'development' los muestra.
+    'app_env'  => 'production',
+    'timezone' => 'America/Santo_Domingo',
 ];

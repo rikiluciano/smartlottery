@@ -1,8 +1,8 @@
 <?php
-header('Content-Type: application/json');
-if (file_exists('prediccion_quinielas.json')) {
-    echo file_get_contents('prediccion_quinielas.json');
-} else {
-    echo json_encode(['error' => 'Archivo no encontrado']);
-}
-?>
+declare(strict_types=1);
+
+/** Sirve el JSON que el VPS deja por FTP. */
+
+require_once __DIR__ . '/app/bootstrap.php';
+
+Http::servirArchivoJson(APP_RAIZ . '/prediccion_quinielas.json');

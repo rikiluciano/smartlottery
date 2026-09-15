@@ -38,3 +38,6 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# ---- Node / compilación de CSS ----
+node_modules/
