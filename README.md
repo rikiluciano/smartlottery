@@ -14,19 +14,18 @@ flowchart TD
         Cron[Cron Job<br/>Cada minuto] --> Scraper[vps/scraper.py]
         CronKeepAlive[Cron Keep-Alive<br/>Cada minuto] --> KeepAlive[vps/keep_alive.py]
         Scraper --> Motores[Motores de Predicción<br/>vps/update_*.py]
-        Motores -- Sube JSON vía FTP_TLS --> Hosting
+        Scraper -- Sincroniza Datos --> SupabaseUpload[vps/upload_to_supabase.py]
+        Motores -- Sube Análisis vía FTP_TLS --> Hosting
         KeepAlive -- Visita URLs --> Hosting
-        KeepAlive -- Descarga DB Backup --> LocalBackup[(Backup Local<br/>~/Lottery-Backup)]
+        SupabaseUpload -- POST JSON --> Supabase[(Supabase<br/>PostgreSQL)]
     end
 
     subgraph Hosting["Hosting Web (InfinityFree / Firebase)"]
         Frontend[Frontend Web<br/>PHP/Tailwind]
         API[Endpoints API<br/>ia_prediccion.php]
-        ExportDB[export_db.php<br/>Endpoint de Respaldo]
-        DB[(MySQL<br/>sorteos)]
+        DB[(MariaDB Local<br/>Caché/Lectura)]
         
         Frontend --> DB
-        ExportDB --> DB
     end
 
     GitHub[Repositorio GitHub] -- GitHub Actions<br/>Despliega PHP/JS/CSS --> Hosting
@@ -35,15 +34,15 @@ flowchart TD
 ### 1. El Frontend / Hosting Web (Actualmente en InfinityFree)
 - **Tecnologías:** PHP 8+, JavaScript Vanilla, Tailwind CSS.
 - **Dominio Base:** `https://numerosrd.42web.io/lottery/`
-- **Funcionalidad:** Sirve la interfaz de usuario, procesa los análisis estadísticos de la IA usando la API de OpenRouter (`api_ia.php`, `api_chat_quiniela.php`) y muestra los resultados desde la base de datos MySQL.
-- **Despliegue:** 100% automatizado mediante GitHub Actions (`.github/workflows/ftp-deploy.yml`). Al hacer un `git push` a `master`, se sube el código fuente vía FTP al hosting.
+- **Funcionalidad:** Sirve la interfaz de usuario, procesa análisis estadísticos usando la API de OpenRouter, y muestra los resultados. Usa una base de datos MariaDB puramente como caché de lectura (los datos llegan desde el VPS).
+- **Despliegue:** 100% automatizado mediante GitHub Actions (`.github/workflows/ftp-deploy.yml`).
 
-### 2. El Cerebro (VPS)
+### 2. El Cerebro (VPS) y Almacenamiento Maestro (Supabase)
 - **Tecnologías:** Python 3.9+
-- **Funcionalidad:** Rastrea resultados diariamente (`vps/scraper.py`), ejecuta los algoritmos de predicción estadísticos, y sube los resultados al hosting en formato `.json` cifrado mediante TLS (`vps/ftp_cliente.py`).
-- **Resiliencia (Anti-Suspensión y Backups):** El VPS corre un script `vps/keep_alive.py` cada minuto que:
-  1. Genera tráfico simulado visitando la web para evitar que InfinityFree suspenda la cuenta por inactividad.
-  2. Descarga la base de datos MySQL completa interactuando con el endpoint secreto `export_db.php`.
+- **Funcionalidad:** Rastrea resultados diariamente (`vps/scraper.py`) y ejecuta los algoritmos de predicción.
+- **Fuente de la Verdad:** El VPS mantiene el estado real de toda la base de datos localmente (`db_backup.json` y `historial_*.txt`). InfinityFree NO es la fuente confiable.
+- **Resiliencia y Backups (Supabase):** Para no depender de un hosting gratuito, los datos extraídos se respaldan permanentemente a **Supabase** (PostgreSQL) vía API REST (`vps/upload_to_supabase.py`).
+- **Anti-Suspensión:** El VPS corre un script `vps/keep_alive.py` cada minuto que genera tráfico simulado visitando la web para evitar que InfinityFree suspenda la cuenta por inactividad.
 
 ---
 
@@ -52,18 +51,17 @@ flowchart TD
 Si el hosting actual (InfinityFree) cae, elimina la cuenta, o el dueño decide migrar a Google Firebase o cualquier otro proveedor, **sigue estos pasos exactos para levantar el proyecto en minutos**. El proyecto está diseñado para no perder un solo byte de información.
 
 ### 📦 ¿Dónde están los datos de respaldo?
-Si el hosting muere, el VPS tiene todo respaldado hasta el último minuto:
-1. **Base de Datos MySQL (`sorteos`):** El VPS la descarga cada minuto. Búscala en el VPS en la ruta `/home/ubuntu/Lottery-Backup/db_completa_YYYY-MM-DD.json`.
-2. **Archivos Crudos y Código del Hosting:** Se respaldan todos los días a las 04:00 AM. Búscalos en `/home/ubuntu/Lottery-Backup/lottery_backup_YYYY-MM-DD.tar.gz`.
-3. **Historial Maestro de Análisis:** El motor de Python mantiene su propia fuente de la verdad en `/home/ubuntu/historial_quinielas.txt`, `historial_pales.txt`, etc.
+Si el hosting muere, los datos están seguros y fuera de peligro:
+1. **Base de Datos:** Está en tu proyecto de **Supabase**. El VPS actualiza los sorteos en Supabase constantemente a través de `vps/upload_to_supabase.py`.
+2. **Historial Maestro de Análisis:** El VPS tiene todos los cálculos crudos guardados localmente (`/home/ubuntu/historial_quinielas.txt`, etc) y el archivo de construcción local (`db_backup.json`).
+3. **Código Fuente:** Se guarda un snapshot diario a las 04:00 AM en `/home/ubuntu/Lottery-Backup/lottery_backup_YYYY-MM-DD.tar.gz`.
 
 ### Paso 1: Configurar el Nuevo Hosting / Base de Datos
-1. Crea una base de datos MySQL en el nuevo proveedor.
-2. Clona el repositorio y ejecuta el script de migración local para crear la tabla de sorteos:
+1. Si usas una base de datos local en el nuevo host (como caché, igual que en InfinityFree), solo debes correr el script de migración para inicializar la tabla:
    ```bash
    php scripts/migrar.php
    ```
-3. **Restaurar los Datos:** Toma el último backup `db_completa_YYYY-MM-DD.json` del VPS y escribe un script rápido en PHP o Python que inserte esos registros en la nueva base de datos. La estructura del JSON es directamente un array de objetos `{fecha, nombre, primera, segunda, tercera}`.
+2. **Sincronización:** Los datos llegarán desde el VPS (porque el VPS seguirá procesando y enviando los JSON a través del cron). Si necesitas importar la base de datos histórica completa, la puedes exportar directo desde Supabase en formato SQL/CSV, o usar `db_backup.json` que está guardado dentro del VPS.
 
 ### Paso 2: Configurar los Secretos en el Nuevo Hosting
 En el nuevo hosting, debes subir manualmente el archivo `secrets.php` (no está en el repo por seguridad). El archivo debe contener:
