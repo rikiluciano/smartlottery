@@ -8,7 +8,10 @@ import requests
 import time
 from datetime import datetime
 import json
+import urllib3
 from . import config
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 URL_BASE = "https://tu-dominio.com"  # Será inferida de los logs o se puede poner dinámica
 
@@ -33,7 +36,7 @@ def run():
     for ruta in paginas:
         url = f"{dominio}{ruta}"
         try:
-            res = requests.get(url, headers=headers, timeout=15)
+            res = requests.get(url, headers=headers, timeout=15, verify=False)
             print(f"  [Tráfico] {url} -> HTTP {res.status_code}")
         except Exception as e:
             print(f"  [Tráfico] Error visitando {url}: {e}")
@@ -45,7 +48,7 @@ def run():
     
     try:
         url_export = f"{dominio}/export_db.php?token={token}"
-        res = requests.get(url_export, headers=headers, timeout=30)
+        res = requests.get(url_export, headers=headers, timeout=30, verify=False)
         
         if res.ok:
             datos = res.json()
