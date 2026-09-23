@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./*.php', './app/**/*.php', './components/**/*.php', './assets/footer/*.html'],
+  safelist: ['ball-1', 'ball-2', 'ball-3'],
   theme: {
     extend: {
       colors: {
