@@ -21,7 +21,7 @@ def run():
     # 1. Visitar las páginas principales para generar tráfico
     # Vamos a extraer el dominio real desde la configuración o hardcodear el dominio si lo tenemos
     # Dado que no sabemos el dominio exacto en Python, usamos la IP/Host o lo pasamos por env.
-    dominio = os.environ.get("LOTTERY_SITE_URL", "https://smartlottery.epizy.com")
+    dominio = os.environ.get("LOTTERY_SITE_URL", "https://numerosrd.42web.io/lottery")
 
     paginas = [
         "/",
