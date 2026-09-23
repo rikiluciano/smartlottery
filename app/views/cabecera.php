@@ -31,6 +31,7 @@ Http::cabecerasDeSeguridad();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($titulo) ?></title>
+<meta name="color-scheme" content="dark">
 <meta name="description" content="Resultados de las loterías de República Dominicana y análisis estadístico del historial de sorteos.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
