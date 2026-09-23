@@ -1,248 +1,119 @@
-# Lotería RD — Resultados y análisis estadístico
+# SmartLottery RD — Arquitectura, Despliegue y Migración de Emergencia
 
-Sistema que recopila los resultados de las loterías de República Dominicana,
-mantiene el historial y publica análisis estadísticos sobre él.
+Sistema automatizado de recopilación y análisis de las loterías de República Dominicana.
+**ESTE DOCUMENTO ESTÁ DISEÑADO PARA SER LEÍDO POR AGENTES DE INTELIGENCIA ARTIFICIAL Y HUMANOS.** 
+Contiene la arquitectura exacta y los pasos de migración a prueba de fallos para levantar el proyecto desde cero en cualquier infraestructura (InfinityFree, Firebase, VPS, etc.).
 
+## 🏗 Arquitectura del Sistema
+
+El sistema está dividido en dos grandes bloques para evadir las limitaciones severas de los hostings gratuitos (como InfinityFree: límites de max_queries_per_hour, límites de CPU, y bloqueos de seguridad anti-bots).
+
+```mermaid
+flowchart TD
+    subgraph VPS["VPS (Motor de Scraper y Análisis)"]
+        Cron[Cron Job<br/>Cada minuto] --> Scraper[vps/scraper.py]
+        CronKeepAlive[Cron Keep-Alive<br/>Cada minuto] --> KeepAlive[vps/keep_alive.py]
+        Scraper --> Motores[Motores de Predicción<br/>vps/update_*.py]
+        Motores -- Sube JSON vía FTP_TLS --> Hosting
+        KeepAlive -- Visita URLs --> Hosting
+        KeepAlive -- Descarga DB Backup --> LocalBackup[(Backup Local<br/>~/Lottery-Backup)]
+    end
+
+    subgraph Hosting["Hosting Web (InfinityFree / Firebase)"]
+        Frontend[Frontend Web<br/>PHP/Tailwind]
+        API[Endpoints API<br/>ia_prediccion.php]
+        ExportDB[export_db.php<br/>Endpoint de Respaldo]
+        DB[(MySQL<br/>sorteos)]
+        
+        Frontend --> DB
+        ExportDB --> DB
+    end
+
+    GitHub[Repositorio GitHub] -- GitHub Actions<br/>Despliega PHP/JS/CSS --> Hosting
 ```
-┌─────────────────────────────┐        ┌──────────────────────────────┐
-│  VPS (Ubuntu)               │        │  Hosting (InfinityFree)      │
-│                             │        │                              │
-│  cron ──▶ vps/scraper.py    │        │  index.php      Calculadora  │
-│             │               │        │  resultados.php Resultados   │
-│             ├─ historiales  │  FTP   │  ia_*.php       Análisis     │
-│             ├─ db_backup    │ ─────▶ │  api_*.php      JSON         │
-│             └─ motores      │        │           │                  │
-│                de análisis  │        │           ▼                  │
-│                             │        │      MySQL (sorteos)         │
-└─────────────────────────────┘        └──────────────────────────────┘
-```
 
-El cálculo pesado corre en el VPS; el hosting solo presenta resultados ya
-calculados. Es una separación necesaria: el plan gratuito de InfinityFree
-tiene cuotas estrictas de consultas por hora y tiempo de ejecución.
+### 1. El Frontend / Hosting Web (Actualmente en InfinityFree)
+- **Tecnologías:** PHP 8+, JavaScript Vanilla, Tailwind CSS.
+- **Dominio Base:** `https://numerosrd.42web.io/lottery/`
+- **Funcionalidad:** Sirve la interfaz de usuario, procesa los análisis estadísticos de la IA usando la API de OpenRouter (`api_ia.php`, `api_chat_quiniela.php`) y muestra los resultados desde la base de datos MySQL.
+- **Despliegue:** 100% automatizado mediante GitHub Actions (`.github/workflows/ftp-deploy.yml`). Al hacer un `git push` a `master`, se sube el código fuente vía FTP al hosting.
+
+### 2. El Cerebro (VPS)
+- **Tecnologías:** Python 3.9+
+- **Funcionalidad:** Rastrea resultados diariamente (`vps/scraper.py`), ejecuta los algoritmos de predicción estadísticos, y sube los resultados al hosting en formato `.json` cifrado mediante TLS (`vps/ftp_cliente.py`).
+- **Resiliencia (Anti-Suspensión y Backups):** El VPS corre un script `vps/keep_alive.py` cada minuto que:
+  1. Genera tráfico simulado visitando la web para evitar que InfinityFree suspenda la cuenta por inactividad.
+  2. Descarga la base de datos MySQL completa interactuando con el endpoint secreto `export_db.php`.
 
 ---
 
-## Qué hace cada parte
+## 🚀 Guía de Recuperación y Migración (Para Agentes de IA)
 
-### Recolección — `vps/scraper.py`
+Si el hosting actual (InfinityFree) cae, elimina la cuenta, o el dueño decide migrar a Google Firebase o cualquier otro proveedor, **sigue estos pasos exactos para levantar el proyecto en minutos**. El proyecto está diseñado para no perder un solo byte de información.
 
-Lee las páginas de resultados de las 43 loterías del catálogo
-(`vps/loterias.py`) y extrae los sorteos del bloque JSON-LD que publica el
-origen. Usar datos estructurados en vez de parsear HTML hace la extracción
-estable frente a cambios de maquetación.
+### 📦 ¿Dónde están los datos de respaldo?
+Si el hosting muere, el VPS tiene todo respaldado hasta el último minuto:
+1. **Base de Datos MySQL (`sorteos`):** El VPS la descarga cada minuto. Búscala en el VPS en la ruta `/home/ubuntu/Lottery-Backup/db_completa_YYYY-MM-DD.json`.
+2. **Archivos Crudos y Código del Hosting:** Se respaldan todos los días a las 04:00 AM. Búscalos en `/home/ubuntu/Lottery-Backup/lottery_backup_YYYY-MM-DD.tar.gz`.
+3. **Historial Maestro de Análisis:** El motor de Python mantiene su propia fuente de la verdad en `/home/ubuntu/historial_quinielas.txt`, `historial_pales.txt`, etc.
 
-En cada pasada:
+### Paso 1: Configurar el Nuevo Hosting / Base de Datos
+1. Crea una base de datos MySQL en el nuevo proveedor.
+2. Clona el repositorio y ejecuta el script de migración local para crear la tabla de sorteos:
+   ```bash
+   php scripts/migrar.php
+   ```
+3. **Restaurar los Datos:** Toma el último backup `db_completa_YYYY-MM-DD.json` del VPS y escribe un script rápido en PHP o Python que inserte esos registros en la nueva base de datos. La estructura del JSON es directamente un array de objetos `{fecha, nombre, primera, segunda, tercera}`.
 
-1. Toma un cerrojo. Si la pasada anterior sigue viva, esta termina sin hacer
-   nada — el rastreo puede durar más de un minuto y el cron dispara cada minuto.
-2. Rastrea el día de hoy. Solo antes de las 10:00 rastrea también el día
-   anterior, cuando el origen publica los resultados tardíos.
-3. Compara con `db_backup.json`. **Si no hay sorteos nuevos, termina ahí**:
-   no recalcula ni sube nada.
-4. Si los hay, actualiza los historiales, dispara los motores de análisis y
-   publica el JSON en el hosting.
-
-### Motores de análisis
-
-| Script | Qué calcula |
-|---|---|
-| `vps/update_prediccion.py` | Palés (pares dentro de un mismo sorteo) que llevan más tiempo sin aparecer |
-| `vps/update_super_prediccion.py` | Súper palés: cruces entre las primeras posiciones de dos loterías el mismo día |
-| `vps/update_quinielas.py` | Retraso de cada número 00–99 por posición |
-| `vps/calc_stats.py` | Frecuencias, última aparición y números acompañantes |
-
-Los tres primeros recorren el historial hacia atrás descartando combinaciones
-ya salidas, hasta aislar la que lleva más tiempo sin aparecer.
-
-> **Qué significan estos números.** Describen el historial: cuánto hace que
-> salió cada combinación y con qué frecuencia aparece. No predicen el próximo
-> sorteo. Cada sorteo es un evento independiente, y una combinación que lleva
-> 800 días sin salir tiene exactamente la misma probabilidad que cualquier
-> otra. La utilidad del sistema está en visualizar el historial, no en
-> anticipar resultados.
-
-### Frontend
-
-| Archivo | Página |
-|---|---|
-| `index.php` | Calculadora de estrategias de inversión |
-| `resultados.php` | Resultados del día y consulta por fecha |
-| `ia_quinielas.php` | Retrasos y frecuencias de los números |
-| `ia_prediccion_pale.php` | Palés pendientes |
-| `ia_prediccion_super_pale.php` | Súper palés pendientes |
-| `panel_admin.php` | Panel de administración (requiere autenticación) |
-
-Las páginas de palés y súper palés comparten una sola plantilla
-(`app/views/pagina_prediccion.php`) parametrizada.
-
----
-
-## Estructura
-
-```
-├── app/                  Capa compartida de PHP — sin acceso web
-│   ├── bootstrap.php     Arranque: configuración, zona horaria, errores
-│   ├── Config.php        Secretos desde entorno o secrets.php
-│   ├── Database.php      Conexión PDO
-│   ├── Auth.php          Autenticación del panel
-│   ├── Http.php          Cabeceras, JSON, escapado, cuotas
-│   ├── Lotteries.php     Catálogo: familias, logos, horarios
-│   ├── Ingest.php        Validación y guardado de sorteos
-│   ├── Results.php       Consulta y ordenación
-│   ├── ResultsPage.php   Modelo de vista de resultados
-│   └── views/            Plantillas compartidas
-├── assets/               CSS compilado, logos, imágenes
-├── components/           Componentes de vista
-├── vps/                  Scripts del servidor (no se despliegan al hosting)
-├── scripts/              Utilidades de línea de comandos
-├── tests/                Suites de PHP y Python
-└── *.php                 Páginas y endpoints (raíz web)
+### Paso 2: Configurar los Secretos en el Nuevo Hosting
+En el nuevo hosting, debes subir manualmente el archivo `secrets.php` (no está en el repo por seguridad). El archivo debe contener:
+```php
+<?php
+return [
+    'db_host' => 'tu-nuevo-host',
+    'db_name' => 'nombre-db',
+    'db_user' => 'usuario',
+    'db_pass' => 'password',
+    'admin_hash' => 'hash-bcrypt-de-la-clave-del-panel',
+    'ingest_token' => 'tu-token-secreto-hexadecimal',
+    'openrouter_key' => 'sk-or-v1-...',
+    'app_env' => 'production'
+];
 ```
 
-`app/`, `vps/`, `tests/` y `scripts/` están bloqueados en `.htaccess`. En
-InfinityFree no se puede colocar código fuera de la raíz web —`htdocs` es el
-DocumentRoot— así que la separación se aplica a nivel de servidor.
+### Paso 3: Desplegar el Código al Nuevo Hosting
+1. Si usas un hosting clásico con FTP, simplemente actualiza los secretos (`FTP_USERNAME` y `FTP_PASSWORD`) en tu repositorio de GitHub (Settings -> Secrets -> Actions).
+2. Haz un `git push`. GitHub Actions compilará Tailwind CSS y subirá todo el proyecto al nuevo servidor automáticamente.
+3. *Alternativa (Firebase):* Si migras a Firebase Hosting (solo admite archivos estáticos), deberás reescribir las rutas PHP a Cloud Functions o usar un backend serverless, y mantener el frontend en HTML/JS puro. (El proyecto actualmente depende de PHP 8+ para interactuar con la DB y OpenRouter).
 
----
-
-## Puesta en marcha
-
-### Requisitos
-
-- PHP 8.1 o superior con `pdo_mysql`, `curl` y `mbstring`
-- Python 3.9 o superior en el VPS
-- Node 18 o superior para compilar la hoja de estilos
-
-### 1. Credenciales
-
-Ningún secreto vive en el repositorio. Copia la plantilla y rellénala:
-
+### Paso 4: Actualizar las Credenciales en el VPS
+Conéctate al VPS (`ssh server2`) y edita el archivo maestro de entorno:
 ```bash
-cp secrets.example.php secrets.php
+sudo nano /etc/lottery.env
 ```
-
-Genera el hash de la contraseña del panel:
-
+Actualiza las credenciales para que apunten al nuevo servidor:
 ```bash
-php -r "echo password_hash('tu-clave', PASSWORD_DEFAULT), PHP_EOL;"
+LOTTERY_FTP_HOST="ftp.nuevo-servidor.com"
+LOTTERY_FTP_USER="nuevo-usuario"
+LOTTERY_FTP_PASS="nueva-clave"
+LOTTERY_FTP_DIR="htdocs/o/public_html/lottery"
+LOTTERY_INGEST_TOKEN="tu-token-secreto-hexadecimal" # El mismo de secrets.php
+LOTTERY_SITE_URL="https://tu-nuevo-dominio.com/lottery" # IMPORTANTE para Keep-Alive
 ```
 
-Y un token de ingesta:
-
-```bash
-php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
-```
-
-`secrets.php` está en `.gitignore` y excluido del despliegue: se sube al
-hosting una sola vez, a mano.
-
-### 2. Base de datos
-
-```bash
-php scripts/migrar.php
-```
-
-### 3. Hoja de estilos
-
-```bash
-npm install
-npm run build:css      # genera assets/css/app.css
-npm run watch:css      # recompila al guardar, durante el desarrollo
-```
-
-### 4. VPS
-
-```bash
-python3 -m pip install -r vps/requirements.txt
-```
-
-Credenciales en `/etc/lottery.env`, con permisos `600`:
-
-```bash
-LOTTERY_FTP_USER=...
-LOTTERY_FTP_PASS=...
-LOTTERY_INGEST_TOKEN=...          # el mismo que en secrets.php
-LOTTERY_DATA_DIR=/home/ubuntu
-```
-
-Cron:
-
+### Paso 5: Reiniciar los Cron Jobs
+El VPS tiene los siguientes cron jobs activos (`crontab -e`). Asegúrate de que estén corriendo:
 ```cron
-* * * * * set -a; . /etc/lottery.env; set +a; cd /home/ubuntu && python3 -m vps.scraper >> /var/log/lottery.log 2>&1
+* * * * * set -a; . /etc/lottery.env; set +a; cd /home/ubuntu && /usr/bin/python3 -m vps.scraper >> /home/ubuntu/cron.log 2>&1
+* * * * * set -a; . /etc/lottery.env; set +a; cd /home/ubuntu && /usr/bin/python3 -m vps.keep_alive >> /home/ubuntu/keep_alive.log 2>&1
+0 2 * * * python3 /home/ubuntu/vps_backup.py
+0 4 * * * ~/Lottery-Backup/backup_project.sh
 ```
+- `vps.scraper`: Extrae loterías y sube análisis cada minuto.
+- `vps.keep_alive`: Evita suspensiones visitando el sitio y descargando el backup de la base de datos cada minuto.
 
-El cerrojo interno evita que dos pasadas se solapen, así que el intervalo de
-un minuto es seguro.
-
-### 5. Despliegue
-
-`git push` a `master` dispara el workflow: compila el CSS y publica por FTP.
-Necesita dos secretos en GitHub — *Settings → Secrets → Actions*:
-
-- `FTP_USERNAME`
-- `FTP_PASSWORD`
-
----
-
-## Desarrollo
-
-```bash
-# Servidor local
-php -S localhost:8000
-
-# Pruebas
-php tests/run.php                                  # PHP
-python3 -m unittest discover -s tests/python -t .  # Python
-```
-
-Para ver los errores en pantalla durante el desarrollo, pon
-`'app_env' => 'development'` en `secrets.php`. En producción los errores van
-solo al log: un aviso de PDO mostrado al visitante filtra las credenciales de
-conexión.
-
-La integración continua comprueba en cada push la sintaxis de PHP y Python,
-ejecuta ambas suites, verifica que el CSS compila y **falla si detecta
-credenciales en el código**.
-
----
-
-## Decisiones de diseño
-
-**Los resultados llegan por FTP, no por HTTP.** InfinityFree sirve un desafío
-JavaScript a todo cliente que no sea un navegador, así que el scraper no puede
-llamar a `guardar_resultados.php` directamente. En su lugar deja un JSON por
-FTP que la web absorbe en la siguiente carga de página. El endpoint HTTP existe
-y funciona, pero solo es útil desde un origen que supere el desafío.
-
-**El frontend lee JSON precalculado, no la base de datos.** Los análisis
-tardarían más que el límite de ejecución de PHP en el hosting compartido.
-
-**Respaldo en disco.** Si MySQL no responde —cuota horaria agotada, caída del
-hosting—, la página sirve `db_backup.json` en lugar de mostrarse vacía.
-
-**Ventana de 90 días en la consulta.** La portada solo necesita el último
-resultado de cada lotería. Acotar el rango mantiene el coste constante aunque
-el historial crezca durante años.
-
----
-
-## Limitaciones conocidas
-
-- **Font Awesome se carga desde CDN.** Sustituirlo por SVG en línea eliminaría
-  la última dependencia externa; requiere reemplazar los iconos uno a uno.
-- **`vps/calc_stats_extendido.py`** es una versión más rica de las estadísticas
-  (coocurrencias, desglose por posición) que no está conectada al frontend.
-- **El panel de administración usa HTTP Basic.** Suficiente para un solo
-  administrador sobre HTTPS; si hacen falta varios usuarios o registro de
-  actividad, hay que pasar a sesiones.
-- **Cuotas del hosting gratuito.** El plan de InfinityFree limita consultas por
-  hora; el respaldo en disco mitiga el efecto, pero no lo elimina.
-
----
-
-## Aviso
-
-Este sitio ofrece información estadística sobre sorteos ya celebrados. No
-predice resultados futuros ni garantiza ganancia alguna. Juega con
-responsabilidad.
+## 🛡 Consideraciones Críticas (Protocolos de Seguridad)
+- **Subida de Archivos:** Las conexiones al servidor de hosting **siempre** deben usar FTP sobre TLS explícito (`FTP_TLS` en `vps/ftp_cliente.py`). No envíes contraseñas en texto plano.
+- **Escritura Atómica:** El cliente FTP sube los archivos temporalmente con un prefijo `.` y los renombra al final para evitar que la web del hosting intente leer un JSON a medio subir y muestre errores en pantalla.
+- **Protección CORS & Headers:** El archivo `app/Http.php` gestiona la seguridad global, controlando orígenes para las peticiones de Inteligencia Artificial, y emitiendo cabeceras de seguridad estrictas.
+- **Falsedad Estadística (Ley de Probabilidades):** Cuando trabajes con la API de IA (OpenRouter), NUNCA le pidas que "justifique matemáticamente" por qué un número va a salir hoy basado en retrasos (Falacia del Jugador). Instruye a la IA para que sea honesta indicando que los sorteos son eventos independientes, pero interpretando la estrategia de descarte humano. (Implementado en `api_chat_quiniela.php`).
