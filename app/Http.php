@@ -79,6 +79,39 @@ final class Http
     }
 
     /**
+     * Configura y envía las cabeceras CORS.
+     * Permite peticiones desde el mismo dominio o los especificados.
+     */
+    public static function cors(array $origenesPermitidos = []): void
+    {
+        if (headers_sent()) {
+            return;
+        }
+
+        $origen = $_SERVER['HTTP_ORIGIN'] ?? '';
+        $propio = $_SERVER['HTTP_HOST'] ?? '';
+        $esquema = self::esHttps() ? 'https://' : 'http://';
+        
+        if (empty($origenesPermitidos)) {
+            $origenesPermitidos = [$esquema . $propio];
+        }
+
+        if ($origen !== '' && in_array($origen, $origenesPermitidos, true)) {
+            header('Access-Control-Allow-Origin: ' . $origen);
+            header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+            header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+            header('Access-Control-Allow-Credentials: true');
+            header('Access-Control-Max-Age: 86400'); // Cache options por 24h
+        }
+
+        // Manejar las peticiones preflight (OPTIONS)
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+            http_response_code(204);
+            exit;
+        }
+    }
+
+    /**
      * Rechaza peticiones originadas fuera del propio sitio.
      *
      * No sustituye a la autenticación —Origin es falsificable fuera del
@@ -87,6 +120,8 @@ final class Http
      */
     public static function exigirMismoOrigen(): void
     {
+        self::cors(); // Invocar cors para inyectar cabeceras.
+        
         $origen = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '';
         $propio = $_SERVER['HTTP_HOST'] ?? '';
 

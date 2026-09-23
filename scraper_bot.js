@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const logContainer = document.getElementById('log-content');
+    const logContainer = document.getElementById('log-container');
     
     function log(message, type = "info") {
         const p = document.createElement('p');

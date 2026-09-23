@@ -98,22 +98,18 @@ def run():
         json.dump(results, f, indent=2)
         
     print("Subiendo archivos al FTP...")
-    try:
-        import ftplib
-        ftp = ftplib.FTP(config.FTP_HOST, config.FTP_USER, config.FTP_PASS)
-        ftp.cwd(config.FTP_DIR)
-        with open(config.ruta('prediccion.json'), 'rb') as f:
-            ftp.storbinary('STOR prediccion.json', f)
-            
-        import os
-        if os.path.exists('pales_encontrados.txt'):
-            with open(config.ruta('pales_encontrados.txt'), 'rb') as f:
-                ftp.storbinary('STOR pales_encontrados.txt', f)
-                
-        ftp.quit()
+    from . import ftp_cliente
+    archivos = {'prediccion.json': config.ruta('prediccion.json')}
+    
+    import os
+    if os.path.exists(config.ruta('pales_encontrados.txt')):
+        archivos['pales_encontrados.txt'] = config.ruta('pales_encontrados.txt')
+        
+    exito = ftp_cliente.subir(archivos)
+    if exito:
         print("Prediccion calculada y subida exitosamente.")
-    except Exception as e:
-        print("Error subiendo prediccion:", e)
+    else:
+        print("Error subiendo prediccion.")
 
 if __name__ == '__main__':
     run()

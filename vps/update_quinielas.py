@@ -109,16 +109,14 @@ def run():
         json.dump(results, f, indent=2)
         
     print("Subiendo archivos al FTP...")
-    try:
-        import ftplib
-        ftp = ftplib.FTP(config.FTP_HOST, config.FTP_USER, config.FTP_PASS)
-        ftp.cwd(config.FTP_DIR)
-        with open(config.ruta('prediccion_quinielas.json'), 'rb') as f:
-            ftp.storbinary('STOR prediccion_quinielas.json', f)
-        ftp.quit()
+    from . import ftp_cliente
+    exito = ftp_cliente.subir({
+        'prediccion_quinielas.json': config.ruta('prediccion_quinielas.json')
+    })
+    if exito:
         print("Subida exitosa.")
-    except Exception as e:
-        print("Error subiendo prediccion:", e)
+    else:
+        print("Error subiendo prediccion.")
 
 if __name__ == '__main__':
     run()

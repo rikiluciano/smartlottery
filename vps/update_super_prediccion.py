@@ -100,22 +100,18 @@ def run():
         json.dump(results, f, indent=2)
         
     print("Subiendo archivos al FTP...")
-    try:
-        import ftplib
-        ftp = ftplib.FTP(config.FTP_HOST, config.FTP_USER, config.FTP_PASS)
-        ftp.cwd(config.FTP_DIR)
-        with open(config.ruta('super_prediccion.json'), 'rb') as f:
-            ftp.storbinary('STOR super_prediccion.json', f)
-            
-        import os
-        if os.path.exists('super_pales_encontrados.txt'):
-            with open(config.ruta('super_pales_encontrados.txt'), 'rb') as f:
-                ftp.storbinary('STOR super_pales_encontrados.txt', f)
-                
-        ftp.quit()
+    from . import ftp_cliente
+    archivos = {'super_prediccion.json': config.ruta('super_prediccion.json')}
+    
+    import os
+    if os.path.exists(config.ruta('super_pales_encontrados.txt')):
+        archivos['super_pales_encontrados.txt'] = config.ruta('super_pales_encontrados.txt')
+        
+    exito = ftp_cliente.subir(archivos)
+    if exito:
         print("Super Prediccion calculada y subida exitosamente.")
-    except Exception as e:
-        print("Error subiendo super prediccion:", e)
+    else:
+        print("Error subiendo super prediccion.")
 
 if __name__ == '__main__':
     run()

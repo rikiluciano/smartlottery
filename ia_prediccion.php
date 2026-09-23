@@ -14,8 +14,7 @@ if (!Http::dentroDeCuota('ia', 20, 600)) {
 $data = json_decode(file_get_contents('php://input'), true);
 
 if (!$data) {
-    echo json_encode(['error' => 'No se recibieron datos para analizar.']);
-    exit;
+    Http::error(400, 'No se recibieron datos para analizar.');
 }
 
 $inversionTotal = floatval($data['inversionTotal'] ?? 0);
@@ -83,18 +82,17 @@ if ($httpCode == 200 && $response) {
         $aiMessage = preg_replace('/```html\s*/', '', $aiMessage);
         $aiMessage = preg_replace('/```\s*/', '', $aiMessage);
         
-        echo json_encode([
+        Http::json([
             'success' => true,
             'analisis_html' => $aiMessage
         ]);
-        exit;
     }
 }
 
 // Fallback si la API de OpenRouter falla o tarda demasiado
 $fallbackHtml = "¡Oye mi hermano! La Inteligencia Artificial está un poco congestionada ahora mismo, pero te cuento: La jugada está clara, planeas aguantar $dias días buscando ese $juego. Necesitas <span class='text-gold-400 font-bold'>$invF</span>. Si coronas, te llevas <span class='text-teal-400 font-bold'>$ganF</span> netos. Recuerda que no siempre se gana el último día; si en un mes logras acertar un par de veces, tus números mensuales pueden ser muy buenos gracias a esta estrategia. ¡Mucha paciencia y cero desesperación!";
 
-echo json_encode([
+Http::json([
     'success' => true,
     'analisis_html' => $fallbackHtml
 ]);
